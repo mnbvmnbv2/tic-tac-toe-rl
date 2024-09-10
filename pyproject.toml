@@ -1,0 +1,10 @@
+[project]
+name = "tic-tac-toe-rl"
+version = "0.1.0"
+description = "Playing around with reinforcement learning in tic-tac-toe"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "gymnasium>=0.29.1",
+    "pufferlib>=1.0.1",
+]
