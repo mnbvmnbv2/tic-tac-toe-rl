@@ -3,4 +3,8 @@
 build
 __pycache__
 *.cpp
-*.pyd
+*.pyd# pixi environments
+.pixi
+*.egg-info
+# magic environments
+.magic
