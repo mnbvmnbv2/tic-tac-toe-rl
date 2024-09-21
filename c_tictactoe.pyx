@@ -9,9 +9,9 @@ from libc.stdlib cimport rand
 
 cdef class TicTacToeEnvSingle:
     cdef:
-        int[:] game_states
-        int[:] rewards
-        int[:] done
+        short[:] game_states
+        short[:] rewards
+        short[:] done
         #int[:] observations
 
     def __init__(
@@ -30,10 +30,10 @@ cdef class TicTacToeEnvSingle:
         # Flatten one-hot encoding
         #self.observations = self.game_state
 
-    cdef int check_win(self):
+    cdef short check_win(self):
         # 0 for tie, 1 for player 1, 2 for player 2
-        cdef int i
-        cdef int j
+        cdef short i
+        cdef short j
         # rows
         for j in range(2):
             for i in range(3):
@@ -72,10 +72,10 @@ cdef class TicTacToeEnvSingle:
         self.rewards[:] = 0
         self.done[0] = 0
 
-    cpdef tuple step(self, int action):
+    cpdef tuple step(self, short action):
         # obs, reward, terminated, truncated, info
-        cdef int winner
-        cdef int opponent_action
+        cdef short winner
+        cdef short opponent_action
         # if illegal move
         if self.game_states[action * 2] > 0 or self.game_states[action * 2 + 1] > 0:
             self.rewards[0] = -1
