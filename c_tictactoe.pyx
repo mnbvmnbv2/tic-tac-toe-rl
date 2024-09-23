@@ -33,41 +33,50 @@ cdef class TicTacToeEnvSingle:
         # 0 for tie, 1 for player 1, 2 for player 2
         cdef short i
         cdef short j
-        cdef short batch_dim
+        cdef Py_ssize_t x
+        cdef Py_ssize_t y
+        cdef Py_ssize_t z
+        cdef Py_ssize_t batch_dim
 
         for batch_dim in range(self.game_states.shape[0]):
             # rows
-            for j in range(2):
-                for i in range(3):
+            for i in range(2):
+                for j in range(3):
+                    x = j * 6 + i
+                    y = j * 6 + 2 + i
+                    z = j * 6 + 4 + i
                     if (
-                        self.game_states[batch_dim, i * 6 + j]
-                        == self.game_states[batch_dim, i * 6 + 2 + j]
-                        == self.game_states[batch_dim, i * 6 + 4 + j]
+                        self.game_states[batch_dim, x]
+                        == self.game_states[batch_dim, y]
+                        == self.game_states[batch_dim, z]
                         != 0
                     ):
-                        self.winners[batch_dim] = j + 1
+                        self.winners[batch_dim] = i + 1
             # columns
-            for j in range(2):
-                for i in range(3):
+            for i in range(2):
+                for j in range(3):
+                    x = j * 2 + i
+                    y = j * 2 + 6 + i
+                    z = j * 2 + 12 + i
                     if (
-                        self.game_states[batch_dim, 2 * i + j]
-                        == self.game_states[batch_dim, 2 * i + 6 + j]
-                        == self.game_states[batch_dim, 2 * i + 12 + j]
+                        self.game_states[batch_dim, x]
+                        == self.game_states[batch_dim, y]
+                        == self.game_states[batch_dim, z]
                         != 0
                     ):
-                        self.winners[batch_dim] = j + 1
+                        self.winners[batch_dim] = i + 1
             # diagonals
-            for j in range(2):
-                if self.game_states[batch_dim, 0 + j] == self.game_states[batch_dim, 6 + j] == self.game_states[batch_dim, 12 + j] != 0:
-                    self.winners[batch_dim] = j + 1
-                if self.game_states[batch_dim, 4 + j] == self.game_states[batch_dim, 6 + j] == self.game_states[batch_dim, 8 + j] != 0:
-                    self.winners[batch_dim] = j + 1
-                if self.game_states[batch_dim, 0 + j] == self.game_states[batch_dim, 4 + j] == self.game_states[batch_dim, 8 + j] != 0:
-                    self.winners[batch_dim] = j + 1
-                if self.game_states[batch_dim, 2 + j] == self.game_states[batch_dim, 4 + j] == self.game_states[batch_dim, 6 + j] != 0:
-                    self.winners[batch_dim] = j + 1
-            if self.winners[batch_dim] == 0:
-                self.winners[batch_dim] = 0 
+            for i in range(2):
+                x = i
+                y = i + 8
+                z = i + 16
+                if self.game_states[batch_dim, x] == self.game_states[batch_dim, y] == self.game_states[batch_dim, z] != 0:
+                    self.winners[batch_dim] = i + 1
+                x = i + 4
+                y = i + 8
+                z = i + 12
+                if self.game_states[batch_dim, x] == self.game_states[batch_dim, y] == self.game_states[batch_dim, z] != 0:
+                    self.winners[batch_dim] = i + 1
 
     cpdef void reset(self):
         # obs, info
@@ -79,7 +88,7 @@ cdef class TicTacToeEnvSingle:
     cpdef void step(self, short action):
         # obs, reward, terminated, truncated, info
         cdef short opponent_action
-        cdef short batch_dim
+        cdef Py_ssize_t batch_dim
 
         for batch_dim in range(self.game_states.shape[0]):
             # if illegal move

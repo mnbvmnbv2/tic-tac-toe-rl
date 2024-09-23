@@ -35,4 +35,6 @@ def other():
 
 
 if __name__ == "__main__":
-    speed_test(1)
+    for i in range(1, 25):
+        print(f"dim={i}")
+        speed_test(i)
