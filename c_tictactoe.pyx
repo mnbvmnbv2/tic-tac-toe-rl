@@ -89,6 +89,9 @@ cdef class TicTacToeEnvSingle:
         # obs, reward, terminated, truncated, info
         cdef short opponent_action
         cdef Py_ssize_t batch_dim
+        cdef int[9] available_moves
+        cdef int num_available_moves
+        cdef int i
 
         for batch_dim in range(self.game_states.shape[0]):
             # if illegal move
@@ -111,14 +114,15 @@ cdef class TicTacToeEnvSingle:
                 self.done[batch_dim] = 1
 
             # Collect all available moves
-            available_moves = []
+            num_available_moves = 0
             for i in range(9):
                 if self.game_states[batch_dim, i * 2] == 0 and self.game_states[batch_dim, i * 2 + 1] == 0:
-                    available_moves.append(i)
+                    available_moves[num_available_moves] = i
+                    num_available_moves += 1
 
             # If there are available moves, select a random move for the opponent
-            if available_moves:
-                opponent_action = available_moves[rand() % len(available_moves)]
+            if num_available_moves > 0:
+                opponent_action = available_moves[rand() % num_available_moves]
                 self.game_states[batch_dim, opponent_action * 2 + 1] = 1
                 self.check_win()
                 if self.winners[batch_dim] > 0:
