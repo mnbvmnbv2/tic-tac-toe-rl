@@ -3,13 +3,15 @@
 # cython: boundscheck=False
 # cython: wraparound=False
 # cython: cdivision=True
-
+# distutils: extra_compile_args=/openmp
+# distutils: extra_link_args=/openmp
+cimport cython
 cimport numpy as cnp
 from libc.stdlib cimport rand
 
 cdef class TicTacToeEnvSingle:
     cdef:
-        short[:, :] game_states
+        short[:, ::1] game_states
         short[:] rewards
         short[:] done
         short[:] winners
@@ -29,6 +31,8 @@ cdef class TicTacToeEnvSingle:
         self.winners = winners
         #self.observations = observations
 
+    # @cython.boundscheck(False)  # Deactivate bounds checking
+    # @cython.wraparound(False)   # Deactivate negative indexing.
     cdef void check_win(self):
         # 0 for tie, 1 for player 1, 2 for player 2
         cdef short i
@@ -85,6 +89,8 @@ cdef class TicTacToeEnvSingle:
         self.done[:] = 0
         self.winners[:] = 0
 
+    # @cython.boundscheck(False)  # Deactivate bounds checking
+    # @cython.wraparound(False)   # Deactivate negative indexing.
     cpdef void step(self, short action):
         # obs, reward, terminated, truncated, info
         cdef short opponent_action
@@ -92,6 +98,7 @@ cdef class TicTacToeEnvSingle:
         cdef int[9] available_moves
         cdef int num_available_moves
         cdef int i
+        cdef int num_moves_made
 
         for batch_dim in range(self.game_states.shape[0]):
             # if illegal move
@@ -102,7 +109,11 @@ cdef class TicTacToeEnvSingle:
             self.game_states[batch_dim, action * 2] = 1
 
             # check if done (player 1 is always last in tied game)
-            self.done[batch_dim] = int(sum(self.game_states[batch_dim]) == 9)
+            for i in range(9):
+                if self.game_states[batch_dim, i * 2] > 0 or self.game_states[batch_dim, i * 2 + 1] > 0:
+                    num_moves_made += 1
+            if num_moves_made == 9:
+                self.done[batch_dim] = 1
             self.check_win()
             if self.winners[batch_dim] > 0 or self.done[batch_dim]:
                 if self.winners[batch_dim] == 0:
