@@ -15,11 +15,10 @@ class TicTacToeEnvSingle:
         self.single_action_space = self.action_space
         self.num_agents = 1
         self.render_mode = None
-        self.emulated = None
 
         self._batch_size = batch_size
 
-        self.game_states = np.zeros((batch_size, 9), dtype=np.uint8)
+        self.game_state = np.zeros((batch_size, 9), dtype=np.uint8)
         self.reward = np.zeros(self._batch_size, dtype=np.float32)
         self.terminated = np.zeros(self._batch_size, dtype=bool)
         self.truncated = np.zeros(self._batch_size, dtype=bool)
@@ -72,9 +71,20 @@ class TicTacToeEnvSingle:
                 self._winners[g] = self.game_state[g, 2]
             self._winners[g] = 0
 
-    def reset(self, seed=None) -> tuple[np.ndarray, dict]:
+    def _reset(self, game_idx: int) -> None:
+        self.game_state[game_idx] = np.zeros(9, dtype=np.uint8)
+        self.reward[game_idx] = 0
+        self.terminated[game_idx] = False
+        self.truncated[game_idx] = False
+        self.info[game_idx] = {}
+        # :(
+        self.calc_obs()
+
+    def reset_all(self, seed=None) -> tuple[np.ndarray, dict]:
         # obs, info
-        self.game_state = np.zeros((self._batch_size, 9), dtype=np.uint8)
+        for g in range(self._batch_size):
+            self._reset(g)
+
         return self.calc_obs(), {}
 
     def nice_print(self) -> str:
@@ -120,7 +130,7 @@ class TicTacToeEnvSingle:
             opponent_action = np.random.choice(opponent_action)
             self.game_state[g, opponent_action] = 2
             self.check_win()
-            if self._winners > 0:
+            if self._winners[g] > 0:
                 # only player 2 can win here
                 self.reward[g] = -1
                 self.terminated[g] = True
@@ -156,14 +166,17 @@ def speed_test(dims=1):
     pre_time = time.time()
     num_steps = 0
     rng = np.random.default_rng()
+    env.reset_all()
     while time.time() - pre_time < 1:
-        obs, info = env.reset()
-        terminated = False
-        while not terminated:
-            action = rng.integers(9, size=env._batch_size)
-            obs, reward, terminated, truncated, info = env.step(action)
-            num_steps += 1
-    print(f"Ran {num_steps} steps in 1 second")
+        action = rng.integers(9, size=env._batch_size)
+        obs, reward, terminated, truncated, info = env.step(action)
+        num_steps += 1
+        # restart the terminated or truncated games
+        for g in range(dims):
+            if terminated[g] or truncated[g]:
+                env._reset(g)
+
+    print(f"Ran {num_steps * dims} steps in 1 second")
 
 
 if __name__ == "__main__":
