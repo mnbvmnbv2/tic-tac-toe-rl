@@ -1,8 +1,8 @@
 version = 1
 requires-python = ">=3.11"
 resolution-markers = [
-    "platform_machine == 'arm64' and platform_system == 'Darwin' and python_full_version >= '3.11'",
-    "platform_machine == 'aarch64' and platform_system == 'Linux' and python_full_version >= '3.11'",
+    "platform_machine == 'arm64' and platform_system == 'Darwin'",
+    "platform_machine == 'aarch64' and platform_system == 'Linux'",
     "(platform_machine != 'aarch64' and platform_machine != 'arm64') or (platform_machine == 'aarch64' and platform_system != 'Linux') or (platform_machine == 'arm64' and platform_system != 'Darwin')",
 ]
 
@@ -13,6 +13,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c8/72/42a6570fc61b1f8913529728ad314c7cf5961540728dcad22c33fb2db6b6/cloudpickle-3.0.0.tar.gz", hash = "sha256:996d9a482c6fb4f33c1a35335cf8afd065d2a56e973270364840712d9131a882", size = 21231 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/96/43/dae06432d0c4b1dc9e9149ad37b4ca8384cf6eb7700cd9215b177b914f0a/cloudpickle-3.0.0-py3-none-any.whl", hash = "sha256:246ee7d0c295602a036e86369c77fecda4ab17b506496730f2f576d9016fd9c7", size = 20088 },
+]
+
+[[package]]
+name = "cupy-cuda12x"
+version = "13.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fastrlock", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "numpy", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/95/c9/0b88c015e98aad808c18f938267585d79e6211fe08650e0de7132e235e40/cupy_cuda12x-13.3.0-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:c0cc095b9a3835fd5db66c45ed3c58ecdc5a3bb14e53e1defbfd4a0ce5c8ecdb", size = 104925909 },
+    { url = "https://files.pythonhosted.org/packages/8c/1f/596803c35833c01a41da21c6a7bb552f1ed56d807090ddc6727c8f396d7d/cupy_cuda12x-13.3.0-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:a0e3bead04e502ebde515f0343444ca3f4f7aed09cbc3a316a946cba97f2ea66", size = 91172049 },
+    { url = "https://files.pythonhosted.org/packages/d0/a8/5b5929830d2da94608d8126bafe2c52d69929a197fd8698ac09142c068ba/cupy_cuda12x-13.3.0-cp311-cp311-win_amd64.whl", hash = "sha256:5f11df1149c7219858b27e4c8be92cb4eaf7364c94af6b78c40dffb98050a61f", size = 69564719 },
+    { url = "https://files.pythonhosted.org/packages/0d/02/e94f7c26a5f446888d8753d4b6642e5107f9fde166d1ac23b7de95ccea7b/cupy_cuda12x-13.3.0-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:bbd0d916310391faf0d7dc9c58fff7a6dc996b67e5768199160bbceb5ebdda8c", size = 103894953 },
+    { url = "https://files.pythonhosted.org/packages/90/dc/da09e5184d94146b8cbf240c2bef1c4851cbafd7e2d60cc71b1530c766ec/cupy_cuda12x-13.3.0-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:e206bd8664f0763732b6012431f484ee535bffd77a5ae95e9bfe1c7c72396625", size = 90980377 },
+    { url = "https://files.pythonhosted.org/packages/14/11/8bc53cab1466605ba88ba3c7243078a784ee2cd8974f5602a491882af9af/cupy_cuda12x-13.3.0-cp312-cp312-win_amd64.whl", hash = "sha256:88ef1478f00ae252da0026e7f04f70c9bb6a2dc130ba5f1e5bc5e8069a928bf5", size = 69499349 },
 ]
 
 [[package]]
@@ -58,13 +75,36 @@ wheels = [
 ]
 
 [[package]]
+name = "fastrlock"
+version = "0.8.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/89/4b/26357c444b48f3f4e3c17b999274e6c60f2367f7e9d454ca2280d8b463e1/fastrlock-0.8.2.tar.gz", hash = "sha256:644ec9215cf9c4df8028d8511379a15d9c1af3e16d80e47f1b6fdc6ba118356a", size = 79508 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1c/0e/2324d71832db47e2949f846e80f79a1391a5cb79661cb1111eb23c27c8d4/fastrlock-0.8.2-cp311-cp311-macosx_10_15_universal2.whl", hash = "sha256:790fc19bccbd39426060047e53629f171a44745613bf360a045e9f9c8c4a2cea", size = 54924 },
+    { url = "https://files.pythonhosted.org/packages/92/d3/3fce38d4ed16db0936cc39fc7ea06ea0c2398d7033a37e49880edd0a8ca6/fastrlock-0.8.2-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_24_aarch64.whl", hash = "sha256:dbdce852e6bb66e1b8c36679d482971d69d93acf1785657522e51b7de30c3356", size = 48232 },
+    { url = "https://files.pythonhosted.org/packages/ba/51/d66763b993d4f2bbd816fc37f42b78e9b45e98fc0c141bc8605ce0a21c9d/fastrlock-0.8.2-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:d47713ffe6d4a627fbf078be9836a95ac106b4a0543e3841572c91e292a5d885", size = 51531 },
+    { url = "https://files.pythonhosted.org/packages/58/ff/653b5b507aa75a962b2fc93bf055d45aa1015b1581b52883052e19abf31b/fastrlock-0.8.2-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.manylinux_2_24_i686.whl", hash = "sha256:ea96503b918fceaf40443182742b8964d47b65c5ebdea532893cb9479620000c", size = 49654 },
+    { url = "https://files.pythonhosted.org/packages/49/82/df877710dd30860c5e858098fa56ce7b6d4ec82f552bfb384e4cd9eadf95/fastrlock-0.8.2-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_24_x86_64.whl", hash = "sha256:c6bffa978793bea5e1b00e677062e53a62255439339591b70e209fa1552d5ee0", size = 49536 },
+    { url = "https://files.pythonhosted.org/packages/7f/8a/24067b0c3e5a0896dbe5e1e547ae176f25b94ce38e21020d1bf78d18d3ba/fastrlock-0.8.2-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:75c07726c8b1a52147fd7987d6baaa318c5dced1416c3f25593e40f56e10755b", size = 52581 },
+    { url = "https://files.pythonhosted.org/packages/36/af/0f0dd7cfc7b202870a6d520b19f8d378ee638cd2b732a330bb16bcc8bc4b/fastrlock-0.8.2-cp311-cp311-musllinux_1_1_aarch64.whl", hash = "sha256:88f079335e9da631efa64486c8207564a7bcd0c00526bb9e842e9d5b7e50a6cc", size = 52779 },
+    { url = "https://files.pythonhosted.org/packages/8e/ee/1ad545f904ad8cd1ce7598b5af501148749a65dff8b9a7498cf7ceedafbb/fastrlock-0.8.2-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:4fb2e77ff04bc4beb71d63c8e064f052ce5a6ea1e001d528d4d7f4b37d736f2e", size = 52185 },
+    { url = "https://files.pythonhosted.org/packages/1d/6d/ccd8fce45a3a724a1682ebe4dc70f00a274e2a178852595298a1c43d70d4/fastrlock-0.8.2-cp311-cp311-win_amd64.whl", hash = "sha256:b4c9083ea89ab236b06e9ef2263971db3b4b507195fc7d5eecab95828dcae325", size = 29926 },
+    { url = "https://files.pythonhosted.org/packages/0d/54/b7c516be2039a4aabc4fbbc5d0346b9c4d878222346f7b37b85ae3624590/fastrlock-0.8.2-cp312-cp312-macosx_10_15_universal2.whl", hash = "sha256:98195866d3a9949915935d40a88e4f1c166e82e378f622c88025f2938624a90a", size = 55286 },
+    { url = "https://files.pythonhosted.org/packages/21/02/fe8f8e38cb875d1a882ef44bbc181310fde55cdb9046058f150d09c2af9b/fastrlock-0.8.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:b22ea9bf5f9fad2b0077e944a7813f91593a4f61adf8faf734a70aed3f2b3a40", size = 50652 },
+    { url = "https://files.pythonhosted.org/packages/3e/ca/16355012a2a5a029a524fd1eb8496eb43190f0e35f623a793ef73e16eb40/fastrlock-0.8.2-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:dcc1bf0ac8a194313cf6e645e300a8a379674ceed8e0b1e910a2de3e3c28989e", size = 52435 },
+    { url = "https://files.pythonhosted.org/packages/e1/a5/a853ca4c0da19d98664ecc36e8104931f63a67e33dd187cb91848783ca94/fastrlock-0.8.2-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:a3dcc876050b8f5cbc0ee84ef1e7f0c1dfe7c148f10098828bc4403683c33f10", size = 51501 },
+    { url = "https://files.pythonhosted.org/packages/10/84/7ee1705e4079f5eb54bf46d3a7eadf5b684fc2a8dce18a1df013c2d41c55/fastrlock-0.8.2-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:685e656048b59d8dfde8c601f188ad53a4d719eb97080cafc8696cda6d75865e", size = 52527 },
+    { url = "https://files.pythonhosted.org/packages/f9/c0/c64e37a5b79966df6110942629dc483ffdeb6062f91afbdb60f848ddfbd1/fastrlock-0.8.2-cp312-cp312-win_amd64.whl", hash = "sha256:fb5363cf0fddd9b50525ddbf64a1e1b28ec4c6dfb28670a940cb1cf988a6786b", size = 30150 },
+]
+
+[[package]]
 name = "gym"
 version = "0.23.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cloudpickle", marker = "python_full_version >= '3.11'" },
-    { name = "gym-notices", marker = "python_full_version >= '3.11'" },
-    { name = "numpy", marker = "python_full_version >= '3.11'" },
+    { name = "cloudpickle", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "gym-notices", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "numpy", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/66/17/b4ec403562c0e8c56f1ce095dcf6d65b7faeabff87f46b6097ab45e6001a/gym-0.23.0.tar.gz", hash = "sha256:dbd3d0c50fc1260b57e6f12ba792152b73551730512623b7653d6dfb2f7a105d", size = 624422 }
 
@@ -82,10 +122,10 @@ name = "gymnasium"
 version = "0.29.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cloudpickle", marker = "python_full_version >= '3.11'" },
-    { name = "farama-notifications", marker = "python_full_version >= '3.11'" },
-    { name = "numpy", marker = "python_full_version >= '3.11'" },
-    { name = "typing-extensions", marker = "python_full_version >= '3.11'" },
+    { name = "cloudpickle", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "farama-notifications", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "numpy", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "typing-extensions", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0d/f8/5699ddb3e1c4f6d97b8930e573074849b921da8374fccd141f0f3a9bd713/gymnasium-0.29.1.tar.gz", hash = "sha256:1a532752efcb7590478b1cc7aa04f608eb7a2fdad5570cd217b66b6a35274bb1", size = 820485 }
 wheels = [
@@ -97,7 +137,7 @@ name = "markdown-it-py"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "mdurl", marker = "python_full_version >= '3.11'" },
+    { name = "mdurl", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/38/71/3b932df36c1a044d397a1f92d1cf91ee0a503d91e470cbd670aa66b07ed0/markdown-it-py-3.0.0.tar.gz", hash = "sha256:e3f60a94fa066dc52ec76661e37c851cb232d92f9886b15cb560aaada2df8feb", size = 74596 }
 wheels = [
@@ -132,7 +172,7 @@ name = "opencv-python"
 version = "3.4.17.63"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", marker = "python_full_version >= '3.11'" },
+    { name = "numpy", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/30/58/75e757f72e3d7506a4eda47b17195a92f23fb14d1ab23f738189bec01daf/opencv-python-3.4.17.63.tar.gz", hash = "sha256:46e1746f66d497a0d48997a807621ab2c3b8f9069945bb5cbf07f1d0aebba5a5", size = 87784941 }
 wheels = [
@@ -149,8 +189,8 @@ name = "pettingzoo"
 version = "1.15.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "gym", marker = "python_full_version >= '3.11'" },
-    { name = "numpy", marker = "python_full_version >= '3.11'" },
+    { name = "gym", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "numpy", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3b/11/bf73acacbd5b150281668a3e2ac504f04fd75c3579db6b552e5bab5bd8bd/PettingZoo-1.15.0.tar.gz", hash = "sha256:cded4074aa94bad9733d5c55c73ed27e50c6bfd525e07f0e6f7c4d0a379bb249", size = 756653 }
 
@@ -159,16 +199,16 @@ name = "pufferlib"
 version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cython", marker = "python_full_version >= '3.11'" },
-    { name = "gym", marker = "python_full_version >= '3.11'" },
-    { name = "gymnasium", marker = "python_full_version >= '3.11'" },
-    { name = "numpy", marker = "python_full_version >= '3.11'" },
-    { name = "opencv-python", marker = "python_full_version >= '3.11'" },
-    { name = "pettingzoo", marker = "python_full_version >= '3.11'" },
-    { name = "pygame", marker = "python_full_version >= '3.11'" },
-    { name = "rich", marker = "python_full_version >= '3.11'" },
-    { name = "rich-argparse", marker = "python_full_version >= '3.11'" },
-    { name = "shimmy", extra = ["gym-v21"], marker = "python_full_version >= '3.11'" },
+    { name = "cython", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "gym", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "gymnasium", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "numpy", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "opencv-python", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "pettingzoo", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "pygame", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "rich", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "rich-argparse", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "shimmy", extra = ["gym-v21"], marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0d/8b/dfa24143d4b455f6dfa0d83699c8dea50e0c9e97eef75f050a30e3667ca1/pufferlib-1.0.1.tar.gz", hash = "sha256:16f67a13fc7aecc338a3c5d81adc39c590cc128cbd2539caab1bc13e3a5df3fc", size = 315366 }
 
@@ -217,8 +257,8 @@ name = "rich"
 version = "13.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "markdown-it-py", marker = "python_full_version >= '3.11'" },
-    { name = "pygments", marker = "python_full_version >= '3.11'" },
+    { name = "markdown-it-py", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "pygments", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/92/76/40f084cb7db51c9d1fa29a7120717892aeda9a7711f6225692c957a93535/rich-13.8.1.tar.gz", hash = "sha256:8260cda28e3db6bf04d2d1ef4dbc03ba80a824c88b0e7668a0f23126a424844a", size = 222080 }
 wheels = [
@@ -230,7 +270,7 @@ name = "rich-argparse"
 version = "1.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "rich", marker = "python_full_version >= '3.11'" },
+    { name = "rich", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/26/f1/0a5ba24d684012e2f25deec88d9a9a1199d8e26e3bb595b812c8b0218cff/rich_argparse-1.5.2.tar.gz", hash = "sha256:84d348d5b6dafe99fffe2c7ea1ca0afe14096c921693445b9eee65ee4fcbfd2c", size = 17142 }
 wheels = [
@@ -251,8 +291,8 @@ name = "shimmy"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "gymnasium", marker = "python_full_version >= '3.11'" },
-    { name = "numpy", marker = "python_full_version >= '3.11'" },
+    { name = "gymnasium", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "numpy", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/92/a7/e2c7e4674f060a4465be9f9f1f40f07e6a0b3acd8d03f9f84832111d45b6/Shimmy-1.3.0.tar.gz", hash = "sha256:f45fbeaa81a0e755abc8251d5741cd4b7d5dddd003aaccda7960e62bee82b493", size = 38891 }
 wheels = [
@@ -261,8 +301,8 @@ wheels = [
 
 [package.optional-dependencies]
 gym-v21 = [
-    { name = "gym", marker = "python_full_version >= '3.11'" },
-    { name = "pyglet", marker = "python_full_version >= '3.11'" },
+    { name = "gym", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "pyglet", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
 ]
 
 [[package]]
@@ -270,14 +310,16 @@ name = "tic-tac-toe-rl"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "cython", marker = "python_full_version >= '3.11'" },
-    { name = "gymnasium", marker = "python_full_version >= '3.11'" },
-    { name = "pufferlib", marker = "python_full_version >= '3.11'" },
-    { name = "setuptools", marker = "python_full_version >= '3.11'" },
+    { name = "cupy-cuda12x", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "cython", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "gymnasium", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "pufferlib", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
+    { name = "setuptools", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and python_full_version >= '3.11') or (platform_machine == 'aarch64' and platform_system == 'Linux') or (platform_machine == 'arm64' and python_full_version >= '3.11') or (platform_machine == 'arm64' and platform_system == 'Darwin')" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "cupy-cuda12x", specifier = ">=13.3.0" },
     { name = "cython", specifier = ">=3.0.11" },
     { name = "gymnasium", specifier = ">=0.29.1" },
     { name = "pufferlib", specifier = ">=1.0.1" },
