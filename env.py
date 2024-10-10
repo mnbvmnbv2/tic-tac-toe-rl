@@ -113,14 +113,8 @@ class TicTacToeEnvSingle:
             is_done = np.all(self.game_state[g] > 0)
             self.check_win()
             if self._winners[g] > 0 or is_done:
-                match self._winners[g]:
-                    case 0:
-                        reward = 0
-                    case 1:
-                        reward = 1
-                    case 2:
-                        reward = -1
-                self.reward[g] = reward
+                # winner can only be player 1 else it's a tie
+                self.reward[g] = self._winners[g]
                 self.terminated[g] = True
                 self.truncated[g] = False
                 continue
