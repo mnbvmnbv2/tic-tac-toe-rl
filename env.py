@@ -180,4 +180,5 @@ def speed_test(dims=1):
 
 
 if __name__ == "__main__":
-    speed_test(1)
+    for i in range(10):
+        speed_test(i)
