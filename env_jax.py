@@ -228,23 +228,104 @@ def check_win(state) -> int:
     )
 
 
+# Define function to perform step speed test
+def step_speed_test(step_fn, env, state, action, env_params, key_step, duration=1.0):
+    start_time = time.time()
+    steps = 0
+    while time.time() - start_time < duration:
+        # Perform one step transition
+        key_step, subkey = jax.random.split(key_step)
+        state = step_fn(subkey, state, action, env_params)[
+            1
+        ]  # Only keep the updated state
+        steps += 1
+    return steps
+
+
+# Perform vectorized (batched) speed test
+def batched_speed_test(
+    step_fn,
+    state_batched,
+    action,
+    env_params,
+    keys_batched,
+    duration=1.0,
+):
+    start_time = time.time()
+    steps = 0
+
+    # Get the batch size from the state_batched.board
+    batch_size = state_batched.board.shape[0]
+
+    # Broadcast the action to match the batch size
+    batched_action = jnp.broadcast_to(action, (batch_size,))
+
+    # Define the key splitting function
+    def split_fn(key):
+        key1, key2 = jax.random.split(key)
+        return key1, key2
+
+    # Vectorize key splitting using jax.vmap
+    split_keys = jax.vmap(split_fn)
+
+    while time.time() - start_time < duration:
+        # Split the keys in a batched way
+        subkeys, keys_batched = split_keys(keys_batched)  # Split keys for the batch
+
+        # Perform batched step transition
+        state_batched = step_fn(subkeys, state_batched, batched_action, env_params)[
+            1
+        ]  # Only keep updated states
+        steps += batch_size  # Increment by batch size
+    return steps
+
+
 def test():
     rng = jax.random.PRNGKey(0)
     rng, key_reset, key_act, key_step = jax.random.split(rng, 4)
 
-    # Instantiate the environment & its settings.
+    # Instantiate the environment and its settings
     env, env_params = TicTacToeEnvSingle(), EnvParams()
 
-    # Reset the environment.
+    # Reset the environment
     obs, state = env.reset(key_reset, env_params)
 
-    # Sample a random action.
+    # Sample a random action
     action = env.action_space(env_params).sample(key_act)
 
-    # Perform the step transition.
-    n_obs, n_state, reward, done, _ = env.step(key_step, state, action, env_params)
+    # Perform speed test for non-JIT environment step
+    num_steps_regular = step_speed_test(
+        env.step, env, state, action, env_params, key_step
+    )
+    print(f"Number of regular steps in 1 second: {num_steps_regular}")
+
+    # JIT-accelerated step transition
+    jit_step = jax.jit(env.step)
+
+    # Perform speed test for JIT-accelerated environment step
+    num_steps_jit = step_speed_test(jit_step, env, state, action, env_params, key_step)
+    print(f"Number of JIT steps in 1 second: {num_steps_jit}")
+
+    # Batch environment reset and step using vmap
+    batch_size = 10  # Number of environments in parallel
+    batched_keys_reset = jax.random.split(key_reset, batch_size)
+    batched_keys_step = jax.random.split(key_step, batch_size)
+
+    # Vectorized environment reset and step using vmap
+    reset_batched = jax.vmap(env.reset, in_axes=(0, None))
+    step_batched = jax.vmap(env.step, in_axes=(0, 0, 0, None))
+
+    # Reset batched environments
+    obs_batched, state_batched = reset_batched(batched_keys_reset, env_params)
+
+    # Perform batched (vmap) speed test
+    num_steps_batched = batched_speed_test(
+        step_batched, state_batched, action, env_params, batched_keys_step
+    )
+    print(f"Number of batched (vmap) steps in 1 second: {num_steps_batched}")
 
 
 if __name__ == "__main__":
     key = jax.random.key(1)
-    test()
+    print(jax.devices())
+    # test()
