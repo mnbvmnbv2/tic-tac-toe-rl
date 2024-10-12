@@ -40,7 +40,8 @@ class TicTacToeEnvSingle(environment.Environment[EnvState, EnvParams]):
     ) -> tuple[chex.Array, EnvState, jnp.ndarray, jnp.ndarray, dict]:
         # Check for illegal move
         illegal_move = state.board[action] > 0
-        if illegal_move:
+
+        def handle_illegal_move(state):
             reward = jnp.array(params.rew_illegal)
             done = False
             return (
@@ -51,62 +52,103 @@ class TicTacToeEnvSingle(environment.Environment[EnvState, EnvParams]):
                 {},
             )
 
-        # Player performs the action
-        state.board[action] = 1
+        def handle_legal_move(state):
+            # Player performs the action
+            new_board = state.board.at[action].set(1)
+            new_state = state.replace(board=new_board)
 
-        # Check if done (player 1 is always last in tied game)
-        is_done = jnp.all(state.board > 0, axis=1)
-        # Update winner
-        winner = check_win(state)
+            # Check if the player has won or if it's a tie
+            winner = check_win(new_state)
+            is_tie = jnp.all(new_board > 0)
+            game_over = (winner == 1) | is_tie
 
-        # Determine games that are done
-        done = winner > 0 or is_done
+            def handle_player_win_or_tie(new_state):
+                reward = jnp.where(
+                    winner == 1,
+                    params.rew_win,  # Player wins
+                    params.rew_tie,  # Tie
+                )
+                return (
+                    lax.stop_gradient(self.get_obs(new_state)),
+                    lax.stop_gradient(new_state),
+                    reward,
+                    True,
+                    {},
+                )
 
-        if done:
-            if winner == 0:
-                reward = params.rew_tie
-            else:
-                reward = jnp.where(winner == 1, params.rew_win, params.rew_loss)
-            done = True
-            return (
-                lax.stop_gradient(self.get_obs(state)),
-                lax.stop_gradient(state),
-                jnp.array(reward),
-                done,
-                {},
+            def handle_opponent_turn(new_state):
+                # Generate all possible indices
+                all_indices = jnp.arange(9, dtype=jnp.uint8)
+
+                # Create a mask where legal moves are 1 and illegal moves are 0
+                legal_moves = (new_state.board == 0).astype(jnp.float32)
+
+                # Compute probabilities for legal moves
+                total_legal_moves = legal_moves.sum()
+                probabilities = legal_moves / total_legal_moves
+
+                # Split the key for randomness
+                key_opponent, key_next = jax.random.split(key)
+
+                # Randomly select an index among legal moves
+                random_index = jax.random.choice(
+                    key_opponent, a=all_indices, p=probabilities
+                )
+
+                # Opponent performs the action
+                new_board = new_state.board.at[random_index].set(2)
+                new_state = new_state.replace(board=new_board)
+
+                # Check if the opponent has won or if it's a tie
+                winner_after_opponent = check_win(new_state)
+                is_tie_after_opponent = jnp.all(new_board > 0)
+                game_over = (winner_after_opponent == 2) | is_tie_after_opponent
+
+                def handle_opponent_win_or_tie(new_state):
+                    reward = jnp.where(
+                        winner_after_opponent == 2,
+                        params.rew_loss,  # Opponent wins
+                        params.rew_tie,  # Tie
+                    )
+                    return (
+                        lax.stop_gradient(self.get_obs(new_state)),
+                        lax.stop_gradient(new_state),
+                        reward,
+                        True,
+                        {},
+                    )
+
+                def continue_game(new_state):
+                    reward = jnp.array(0)
+                    done = False
+                    return (
+                        lax.stop_gradient(self.get_obs(new_state)),
+                        lax.stop_gradient(new_state),
+                        reward,
+                        done,
+                        {},
+                    )
+
+                return lax.cond(
+                    game_over,
+                    handle_opponent_win_or_tie,
+                    continue_game,
+                    new_state,
+                )
+
+            return lax.cond(
+                game_over,
+                handle_player_win_or_tie,
+                handle_opponent_turn,
+                new_state,
             )
 
-        # Compute opponent actions
-        zero_indices = jnp.where(state.board == 0)[0]
-        key = jax.random.PRNGKey(0)
-        random_index = jax.random.choice(key, zero_indices)
-        state.board[random_index] = 2
-
-        # Update winner after opponent's move
-        winner = check_win()
-
-        # Check if opponent won
-        opponent_won = winner > 0
-
-        if opponent_won:
-            reward = jnp.array(params.rew_loss)
-            done = True
-            return (
-                lax.stop_gradient(self.get_obs(state)),
-                lax.stop_gradient(state),
-                reward,
-                done,
-                {},
-            )
-
-        reward = jnp.array(0)
-        done = False
-        return (
-            lax.stop_gradient(self.get_obs(state)),
-            lax.stop_gradient(state),
-            reward,
-            done,
-            {},
+        # Use `lax.cond` to handle illegal and legal moves
+        return lax.cond(
+            illegal_move,
+            handle_illegal_move,
+            handle_legal_move,
+            state,
         )
 
     def reset_env(
@@ -149,21 +191,26 @@ class TicTacToeEnvSingle(environment.Environment[EnvState, EnvParams]):
 def check_win(state) -> int:
     reshaped_state = state.board.reshape(3, 3)
     # 0 for tie, 1 for player 1, 2 for player 2
-    # rows
-    rows_equal = jnp.all(reshaped_state == reshaped_state[:, [0]], axis=2) & (
+    # Check for row-wise winners
+    rows_equal = jnp.all(reshaped_state == reshaped_state[:, [0]], axis=1) & (
         reshaped_state[:, 0] != 0
     )
     row_winners = reshaped_state[:, 0] * rows_equal
-    cols_equal = jnp.all(reshaped_state == reshaped_state[[0], :], axis=1) & (
+
+    # Check for column-wise winners
+    cols_equal = jnp.all(reshaped_state == reshaped_state[[0], :], axis=0) & (
         reshaped_state[0, :] != 0
     )
     col_winners = reshaped_state[0, :] * cols_equal
+
+    # Check for diagonal winners
     diagonal_1 = (
         (reshaped_state[0, 0] != 0)
         & (reshaped_state[0, 0] == reshaped_state[1, 1])
         & (reshaped_state[0, 0] == reshaped_state[2, 2])
     )
     diagonal_1_winners = reshaped_state[0, 0] * diagonal_1
+
     diagonal_2 = (
         (reshaped_state[0, 2] != 0)
         & (reshaped_state[0, 2] == reshaped_state[1, 1])
@@ -171,10 +218,11 @@ def check_win(state) -> int:
     )
     diagonal_2_winners = reshaped_state[0, 2] * diagonal_2
 
+    # Return the maximum winner (1 for player 1, 2 for player 2, 0 for no winner)
     return jnp.maximum(
-        row_winners.max(axis=1),
+        row_winners.max(),
         jnp.maximum(
-            col_winners.max(axis=1),
+            col_winners.max(),
             jnp.maximum(diagonal_1_winners, diagonal_2_winners),
         ),
     )
