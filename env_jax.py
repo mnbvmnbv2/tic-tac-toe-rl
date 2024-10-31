@@ -7,6 +7,8 @@ import jax.numpy as jnp
 from jax import lax
 from gymnax.environments import environment, spaces
 
+jax.config.update("jax_enable_x64", True)
+
 
 @struct.dataclass
 class EnvState(environment.EnvState):
@@ -61,8 +63,8 @@ class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
                 (board[line[0]] == board[line[1]])
                 & (board[line[1]] == board[line[2]])
                 & (board[line[0]] != 0),
-                lambda: board[line[0]],
-                lambda: 0,
+                lambda: board[line[0]].astype(jnp.int32),  # Ensuring int32 output
+                lambda: jnp.array(0, dtype=jnp.int32),  # Ensuring int32 output
             )
             return jnp.maximum(winner, line_win), None
 
@@ -275,19 +277,70 @@ def test():
     # Reset the environment
     obs, state = env.reset(key_reset, env_params)
 
-    # Perform speed test for non-JIT environment step
+    # Perform speed test
     num_steps_regular = step_speed_test(rng, env.step, env, state, env_params)
     print(f"Number of regular steps in 1 second: {num_steps_regular}")
 
-    # JIT-accelerated step transition
-    jit_step = jax.jit(env.step)
 
-    # Perform speed test for JIT-accelerated environment step
-    num_steps_jit = step_speed_test(rng, jit_step, env, state, env_params)
-    print(f"Number of JIT steps in 1 second: {num_steps_jit}")
+# Define function to perform a batched step speed test
+def batched_step_speed_test(rng, step_fn, env, states, env_params, duration=1.0):
+    # Number of parallel environments
+    num_envs = states.board.shape[0]
+
+    # Warm-up to compile the function with a batch of actions and keys
+    rng, step_rng = jax.random.split(rng)
+    action_rngs = jax.random.split(step_rng, num_envs)
+    actions = jax.vmap(env.action_space(env_params).sample)(action_rngs)
+    step_keys = jax.random.split(
+        step_rng, num_envs
+    )  # Batched keys for each environment
+    _ = step_fn(step_keys, states, actions, env_params)
+
+    start_time = time.time()
+    steps = 0
+
+    # Loop until the time duration is reached
+    while time.time() - start_time < duration:
+        rng, step_rng = jax.random.split(rng)
+        action_rngs = jax.random.split(step_rng, num_envs)
+        actions = jax.vmap(env.action_space(env_params).sample)(action_rngs)
+
+        # Update all environments in parallel using vmap and batched PRNG keys
+        step_keys = jax.random.split(
+            step_rng, num_envs
+        )  # Generate new keys for each step
+        states = step_fn(step_keys, states, actions, env_params)[1]
+        steps += 1
+
+    # Multiply by batch size to get total steps across all environments
+    return steps * num_envs
+
+
+def batched_test(num_envs=12800000, duration=1.0):
+    rng = jax.random.PRNGKey(0)
+    rng, key_reset = jax.random.split(rng)
+
+    # Instantiate the environment and its parameters
+    env, env_params = TicTacToeEnv(), EnvParams()
+
+    # Initialize batched states for the specified number of environments
+    obs, states = jax.vmap(env.reset, in_axes=(0, None))(
+        jax.random.split(key_reset, num_envs), env_params
+    )
+
+    # Vectorize the environment step function for batched processing
+    batched_step = jax.vmap(env.step, in_axes=(0, 0, 0, None))
+
+    # Perform batched speed test
+    num_steps_batched = batched_step_speed_test(
+        rng, batched_step, env, states, env_params, duration
+    )
+    print(
+        f"Number of batched steps across {num_envs} environments in {duration} second(s): {num_steps_batched}"
+    )
 
 
 if __name__ == "__main__":
-    key = jax.random.key(1)
-    # print(jax.devices())
-    test()
+    print(jax.devices())
+    # test()
+    batched_test()
