@@ -13,6 +13,9 @@ class EnvState(environment.EnvState):
     board: jnp.ndarray
 
 
+step_return = tuple[chex.Array, EnvState, jnp.ndarray, jnp.ndarray, dict]
+
+
 @struct.dataclass
 class EnvParams(environment.EnvParams):
     rew_win: int = 1
@@ -21,134 +24,157 @@ class EnvParams(environment.EnvParams):
     rew_illegal: int = -1
 
 
-class TicTacToeEnvSingle(environment.Environment[EnvState, EnvParams]):
-    def __init__(self) -> None:
+class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
+    def __init__(self):
         super().__init__()
         self.obs_shape = (18,)
+        self._step = -1
 
     @property
     def default_params(self) -> EnvParams:
-        """Default environment parameters for Pendulum-v0."""
         return EnvParams()
 
+    def get_obs(self, state: EnvState, params=None, key=None) -> chex.Array:
+        # flatten one-hot encoding
+        return jnp.concatenate(
+            [state.board == 1, state.board == 2], axis=0, dtype=jnp.int32
+        )
+
+    def check_win(self, board: jnp.ndarray) -> int:
+        # Win conditions defined as indices on the board
+        win_conditions = jnp.array(
+            [
+                (0, 1, 2),
+                (3, 4, 5),
+                (6, 7, 8),
+                (0, 3, 6),
+                (1, 4, 8),
+                (2, 5, 8),
+                (0, 4, 8),
+                (2, 4, 6),
+            ],
+            dtype=jnp.int32,
+        )
+
+        def check_line(winner, line):
+            line_win = lax.cond(
+                (board[line[0]] == board[line[1]])
+                & (board[line[1]] == board[line[2]])
+                & (board[line[0]] != 0),
+                lambda: board[line[0]],
+                lambda: 0,
+            )
+            return jnp.maximum(winner, line_win), None
+
+        # Use `jnp.array(0)` as the initial carry value, which represents "no winner"
+        winner, _ = lax.scan(check_line, jnp.array(0), win_conditions)
+        return winner  # Returns 1 if player wins, 2 if opponent wins, 0 otherwise
+
+    def handle_illegal_move(self, params: EnvParams, state: EnvState) -> step_return:
+        return self.get_obs(state), state, jnp.array(params.rew_illegal), True, {}
+
     def step_env(
-        self,
-        key: chex.PRNGKey,
-        state: EnvState,
-        action: int | float | chex.Array,
-        params: EnvParams,
-    ) -> tuple[chex.Array, EnvState, jnp.ndarray, jnp.ndarray, dict]:
+        self, key: jax.random.PRNGKey, state: EnvState, action: int, params: EnvParams
+    ) -> step_return:
+        self._step += 1
         # Check for illegal move
-        illegal_move = state.board[action] > 0
-
-        def handle_illegal_move(state):
-            reward = jnp.array(params.rew_illegal)
-            done = False
-            return (
-                lax.stop_gradient(self.get_obs(state)),
-                lax.stop_gradient(state),
-                reward,
-                done,
-                {},
-            )
-
-        def handle_legal_move(state):
-            # Player performs the action
-            new_board = state.board.at[action].set(1)
-            new_state = state.replace(board=new_board)
-
-            # Check if the player has won or if it's a tie
-            winner = check_win(new_state)
-            is_tie = jnp.all(new_board > 0)
-            game_over = (winner == 1) | is_tie
-
-            def handle_player_win_or_tie(new_state):
-                reward = jnp.where(
-                    winner == 1,
-                    params.rew_win,  # Player wins
-                    params.rew_tie,  # Tie
-                )
-                return (
-                    lax.stop_gradient(self.get_obs(new_state)),
-                    lax.stop_gradient(new_state),
-                    reward,
-                    True,
-                    {},
-                )
-
-            def handle_opponent_turn(new_state):
-                # Generate all possible indices
-                all_indices = jnp.arange(9, dtype=jnp.uint8)
-
-                # Create a mask where legal moves are 1 and illegal moves are 0
-                legal_moves = (new_state.board == 0).astype(jnp.float32)
-
-                # Compute probabilities for legal moves
-                total_legal_moves = legal_moves.sum()
-                probabilities = legal_moves / total_legal_moves
-
-                # Split the key for randomness
-                key_opponent, key_next = jax.random.split(key)
-
-                # Randomly select an index among legal moves
-                random_index = jax.random.choice(
-                    key_opponent, a=all_indices, p=probabilities
-                )
-
-                # Opponent performs the action
-                new_board = new_state.board.at[random_index].set(2)
-                new_state = new_state.replace(board=new_board)
-
-                # Check if the opponent has won or if it's a tie
-                winner_after_opponent = check_win(new_state)
-                is_tie_after_opponent = jnp.all(new_board > 0)
-                game_over = (winner_after_opponent == 2) | is_tie_after_opponent
-
-                def handle_opponent_win_or_tie(new_state):
-                    reward = jnp.where(
-                        winner_after_opponent == 2,
-                        params.rew_loss,  # Opponent wins
-                        params.rew_tie,  # Tie
-                    )
-                    return (
-                        lax.stop_gradient(self.get_obs(new_state)),
-                        lax.stop_gradient(new_state),
-                        reward,
-                        True,
-                        {},
-                    )
-
-                def continue_game(new_state):
-                    reward = jnp.array(0)
-                    done = False
-                    return (
-                        lax.stop_gradient(self.get_obs(new_state)),
-                        lax.stop_gradient(new_state),
-                        reward,
-                        done,
-                        {},
-                    )
-
-                return lax.cond(
-                    game_over,
-                    handle_opponent_win_or_tie,
-                    continue_game,
-                    new_state,
-                )
-
-            return lax.cond(
-                game_over,
-                handle_player_win_or_tie,
-                handle_opponent_turn,
-                new_state,
-            )
-
-        # Use `lax.cond` to handle illegal and legal moves
+        illegal_move = state.board[action] != 0
         return lax.cond(
             illegal_move,
-            handle_illegal_move,
-            handle_legal_move,
-            state,
+            lambda: self.handle_illegal_move(params, state),
+            lambda: self.perform_player_move(key, state, action, params),
+        )
+
+    def perform_player_move(
+        self, key: jax.random.PRNGKey, state: EnvState, action: int, params: EnvParams
+    ) -> step_return:
+        # Update board with player move
+        new_board = state.board.at[action].set(1)
+        new_state = EnvState(self._step, new_board)
+        winner = self.check_win(new_board)
+
+        # Check if player won or if it's a tie
+        player_wins = winner == 1
+        is_tie = jnp.all(new_board > 0)
+
+        return lax.cond(
+            player_wins,
+            lambda: (
+                self.get_obs(new_state),
+                new_state,
+                jnp.array(params.rew_win),
+                True,
+                {},
+            ),
+            lambda: lax.cond(
+                is_tie,
+                lambda: (
+                    self.get_obs(new_state),
+                    new_state,
+                    jnp.array(params.rew_tie),
+                    True,
+                    {},
+                ),
+                lambda: self.perform_opponent_move(key, new_state, params),
+            ),
+        )
+
+    def perform_opponent_move(
+        self, key: jax.random.PRNGKey, state: EnvState, params: EnvParams
+    ) -> step_return:
+        # Create a mask for legal moves (1 for legal, 0 for illegal)
+        legal_moves_mask = (state.board == 0).astype(jnp.float32)
+
+        # Count available moves
+        num_legal_moves = legal_moves_mask.sum()
+
+        # Ensure there's at least one legal move to prevent division errors
+        def choose_move(_):
+            # Randomly select a legal move
+            probabilities = legal_moves_mask / num_legal_moves
+            return jax.random.choice(key, a=jnp.arange(9), p=probabilities)
+
+        opponent_action = lax.cond(
+            num_legal_moves > 0,
+            choose_move,
+            lambda _: -1,  # Return -1 if no legal moves are available (should not happen in normal play)
+            operand=None,
+        )
+
+        # Update board with opponent move if a valid move was chosen
+        new_board = lax.cond(
+            opponent_action >= 0,
+            lambda action: state.board.at[action].set(2),
+            lambda _: state.board,
+            operand=opponent_action,
+        )
+        new_state = EnvState(self._step, new_board)
+        winner = self.check_win(new_board)
+
+        # Check if opponent won or if it's a tie
+        opponent_wins = winner == 2
+        is_tie = jnp.all(new_board > 0)
+
+        return lax.cond(
+            opponent_wins,
+            lambda: (
+                self.get_obs(new_state),
+                new_state,
+                jnp.array(params.rew_loss),
+                True,
+                {},
+            ),
+            lambda: lax.cond(
+                is_tie,
+                lambda: (
+                    self.get_obs(new_state),
+                    new_state,
+                    jnp.array(params.rew_tie),
+                    True,
+                    {},
+                ),
+                lambda: (self.get_obs(new_state), new_state, jnp.array(0), False, {}),
+            ),
         )
 
     def reset_env(
@@ -156,14 +182,9 @@ class TicTacToeEnvSingle(environment.Environment[EnvState, EnvParams]):
         key: chex.PRNGKey,
         params: EnvParams,
     ) -> tuple[chex.Array, EnvState]:
-        state = EnvState(time=0, board=jnp.zeros((9), dtype=jnp.uint8))
+        self._step = -1
+        state = EnvState(time=0, board=jnp.zeros((9), dtype=jnp.int32))
         return self.get_obs(state), state
-
-    def get_obs(self, state: EnvState, params=None, key=None) -> chex.Array:
-        # flatten one-hot encoding
-        return jnp.concatenate(
-            [state.board == 1, state.board == 2], axis=0, dtype=jnp.uint8
-        )
 
     def is_terminal(self, state: EnvState, params: EnvParams) -> jnp.ndarray:
         winner = check_win(state)
@@ -229,103 +250,44 @@ def check_win(state) -> int:
 
 
 # Define function to perform step speed test
-def step_speed_test(step_fn, env, state, action, env_params, key_step, duration=1.0):
+def step_speed_test(rng, step_fn, env, state, env_params, duration=1.0):
+    # Warm-up to compile the function
+    rng, step_rng, action_rng = jax.random.split(rng, 3)
+    action = env.action_space(env_params).sample(action_rng)
+    _ = step_fn(step_rng, state, action, env_params)
+
     start_time = time.time()
     steps = 0
     while time.time() - start_time < duration:
-        # Perform one step transition
-        key_step, subkey = jax.random.split(key_step)
-        state = step_fn(subkey, state, action, env_params)[
-            1
-        ]  # Only keep the updated state
+        rng, step_rng, action_rng = jax.random.split(rng, 3)
+        state = step_fn(step_rng, state, action, env_params)[1]
         steps += 1
-    return steps
-
-
-# Perform vectorized (batched) speed test
-def batched_speed_test(
-    step_fn,
-    state_batched,
-    action,
-    env_params,
-    keys_batched,
-    duration=1.0,
-):
-    start_time = time.time()
-    steps = 0
-
-    # Get the batch size from the state_batched.board
-    batch_size = state_batched.board.shape[0]
-
-    # Broadcast the action to match the batch size
-    batched_action = jnp.broadcast_to(action, (batch_size,))
-
-    # Define the key splitting function
-    def split_fn(key):
-        key1, key2 = jax.random.split(key)
-        return key1, key2
-
-    # Vectorize key splitting using jax.vmap
-    split_keys = jax.vmap(split_fn)
-
-    while time.time() - start_time < duration:
-        # Split the keys in a batched way
-        subkeys, keys_batched = split_keys(keys_batched)  # Split keys for the batch
-
-        # Perform batched step transition
-        state_batched = step_fn(subkeys, state_batched, batched_action, env_params)[
-            1
-        ]  # Only keep updated states
-        steps += batch_size  # Increment by batch size
     return steps
 
 
 def test():
     rng = jax.random.PRNGKey(0)
-    rng, key_reset, key_act, key_step = jax.random.split(rng, 4)
+    rng, key_reset = jax.random.split(rng)
 
     # Instantiate the environment and its settings
-    env, env_params = TicTacToeEnvSingle(), EnvParams()
+    env, env_params = TicTacToeEnv(), EnvParams()
 
     # Reset the environment
     obs, state = env.reset(key_reset, env_params)
 
-    # Sample a random action
-    action = env.action_space(env_params).sample(key_act)
-
     # Perform speed test for non-JIT environment step
-    num_steps_regular = step_speed_test(
-        env.step, env, state, action, env_params, key_step
-    )
+    num_steps_regular = step_speed_test(rng, env.step, env, state, env_params)
     print(f"Number of regular steps in 1 second: {num_steps_regular}")
 
     # JIT-accelerated step transition
     jit_step = jax.jit(env.step)
 
     # Perform speed test for JIT-accelerated environment step
-    num_steps_jit = step_speed_test(jit_step, env, state, action, env_params, key_step)
+    num_steps_jit = step_speed_test(rng, jit_step, env, state, env_params)
     print(f"Number of JIT steps in 1 second: {num_steps_jit}")
-
-    # Batch environment reset and step using vmap
-    batch_size = 10  # Number of environments in parallel
-    batched_keys_reset = jax.random.split(key_reset, batch_size)
-    batched_keys_step = jax.random.split(key_step, batch_size)
-
-    # Vectorized environment reset and step using vmap
-    reset_batched = jax.vmap(env.reset, in_axes=(0, None))
-    step_batched = jax.vmap(env.step, in_axes=(0, 0, 0, None))
-
-    # Reset batched environments
-    obs_batched, state_batched = reset_batched(batched_keys_reset, env_params)
-
-    # Perform batched (vmap) speed test
-    num_steps_batched = batched_speed_test(
-        step_batched, state_batched, action, env_params, batched_keys_step
-    )
-    print(f"Number of batched (vmap) steps in 1 second: {num_steps_batched}")
 
 
 if __name__ == "__main__":
     key = jax.random.key(1)
-    print(jax.devices())
-    # test()
+    # print(jax.devices())
+    test()
