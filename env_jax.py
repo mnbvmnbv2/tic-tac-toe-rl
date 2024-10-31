@@ -288,12 +288,13 @@ def batched_step_speed_test(rng, step_fn, env, states, env_params, duration=1.0)
     num_envs = states.board.shape[0]
 
     # Warm-up to compile the function with a batch of actions and keys
+    rng, action_rng = jax.random.split(rng)
+    action_keys = jax.random.split(action_rng, num_envs)
+    actions = jax.vmap(env.action_space(env_params).sample)(action_keys)
     rng, step_rng = jax.random.split(rng)
-    action_rngs = jax.random.split(step_rng, num_envs)
-    actions = jax.vmap(env.action_space(env_params).sample)(action_rngs)
     step_keys = jax.random.split(
         step_rng, num_envs
-    )  # Batched keys for each environment
+    )  # Generate unique keys for each environment
     _ = step_fn(step_keys, states, actions, env_params)
 
     start_time = time.time()
@@ -301,14 +302,16 @@ def batched_step_speed_test(rng, step_fn, env, states, env_params, duration=1.0)
 
     # Loop until the time duration is reached
     while time.time() - start_time < duration:
+        # Split RNG to generate a new batch of action keys
+        rng, action_rng = jax.random.split(rng)
+        action_keys = jax.random.split(action_rng, num_envs)
+        actions = jax.vmap(env.action_space(env_params).sample)(action_keys)
+
+        # Split RNG to generate a new batch of step keys for each environment
         rng, step_rng = jax.random.split(rng)
-        action_rngs = jax.random.split(step_rng, num_envs)
-        actions = jax.vmap(env.action_space(env_params).sample)(action_rngs)
+        step_keys = jax.random.split(step_rng, num_envs)
 
         # Update all environments in parallel using vmap and batched PRNG keys
-        step_keys = jax.random.split(
-            step_rng, num_envs
-        )  # Generate new keys for each step
         states = step_fn(step_keys, states, actions, env_params)[1]
         steps += 1
 
@@ -316,7 +319,7 @@ def batched_step_speed_test(rng, step_fn, env, states, env_params, duration=1.0)
     return steps * num_envs
 
 
-def batched_test(num_envs=12800000, duration=1.0):
+def batched_test(num_envs=16000, duration=1.0):
     rng = jax.random.PRNGKey(0)
     rng, key_reset = jax.random.split(rng)
 
