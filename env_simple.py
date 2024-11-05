@@ -30,10 +30,9 @@ class TicTacToeEnvSingle:
     def calc_obs(self) -> np.ndarray:
         # flatten one-hot encoding
         self.observation = (
-            np.eye(3)[self.game_state][:, :, 1:].flatten().astype(np.uint8)
+            np.eye(3)[self.game_state][:, 1:].flatten().astype(np.uint8)
             # .reshape(self._batch_size, 18)
         )
-        print("a ", self.observation)
 
         return self.observation
 
@@ -93,7 +92,6 @@ class TicTacToeEnvSingle:
         )
 
     def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict]:
-        print("action", action)
         # obs, reward, terminated, truncated, info
         # if illegal move
         if self.game_state[action] > 0:
