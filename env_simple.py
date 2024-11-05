@@ -27,6 +27,9 @@ class TicTacToeEnvSingle:
 
         self.metadata = {"render_modes": []}
 
+    def close(self) -> None:
+        pass
+
     def calc_obs(self) -> np.ndarray:
         # flatten one-hot encoding
         self.observation = (
