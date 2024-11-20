@@ -5,7 +5,7 @@ import numpy as np
 import gymnasium
 
 
-class TicTacToeEnvSingle:
+class TicTacToeEnv:
     def __init__(self) -> None:
         self.observation_space = gymnasium.spaces.Box(
             low=0, high=2, shape=(18,), dtype=np.uint8
@@ -153,7 +153,7 @@ class TicTacToeEnvSingle:
 
 
 def test():
-    env = TicTacToeEnvSingle()
+    env = TicTacToeEnv()
     obs, info = env.reset()
     print(obs.reshape((3, 6)))
     print(env.nice_print())
@@ -170,7 +170,7 @@ def test():
 
 
 def speed_test(dims=1):
-    env = TicTacToeEnvSingle(batch_size=dims)
+    env = TicTacToeEnv(batch_size=dims)
     pre_time = time.time()
     num_steps = 0
     rng = np.random.default_rng()

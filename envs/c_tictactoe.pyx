@@ -9,7 +9,7 @@ cimport cython
 cimport numpy as cnp
 from libc.stdlib cimport rand
 
-cdef class TicTacToeEnvSingle:
+cdef class TicTacToeEnv:
     cdef:
         short[:, ::1] game_states
         short[:] rewards

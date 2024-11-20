@@ -7,7 +7,7 @@ import numpy as np
 extensions = [
     Extension(
         name="c_tictactoe",  # This should match the name of the .pyx file without the extension
-        sources=["c_tictactoe.pyx"],  # The Cython file to be compiled
+        sources=["envs/c_tictactoe.pyx"],  # The Cython file to be compiled
         include_dirs=[np.get_include()],  # Include directory for numpy
     )
 ]

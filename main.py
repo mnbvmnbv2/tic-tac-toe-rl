@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from c_tictactoe import TicTacToeEnvSingle
+from envs.c_tictactoe import TicTacToeEnvSingle
 
 
 def speed_test():

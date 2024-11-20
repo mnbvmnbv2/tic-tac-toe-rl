@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from c_tictactoe import TicTacToeEnvSingle
+from envs.c_tictactoe import TicTacToeEnv
 
 
 def speed_test(dim=1):
@@ -8,7 +8,7 @@ def speed_test(dim=1):
     rewards = np.zeros((dim), dtype=np.int16)
     done = np.zeros((dim), dtype=np.int16)
     winners = np.zeros((dim), dtype=np.int16)
-    env = TicTacToeEnvSingle(
+    env = TicTacToeEnv(
         game_states=game_states,
         rewards=rewards,
         done=done,

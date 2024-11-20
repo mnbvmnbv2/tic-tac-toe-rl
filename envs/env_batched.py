@@ -5,7 +5,7 @@ import numpy as np
 import gymnasium
 
 
-class TicTacToeEnvSingle:
+class TicTacToeEnv:
     def __init__(self, batch_size: int = 1) -> None:
         self.observation_space = gymnasium.spaces.Box(
             low=0, high=1, shape=(18,), dtype=np.uint8
@@ -65,6 +65,44 @@ class TicTacToeEnvSingle:
                 np.maximum(diagonal_1_winners, diagonal_2_winners),
             ),
         )
+
+    def check_win_loops(self) -> None:
+        # 0 for tie, 1 for player 1, 2 for player 2
+        # rows
+        for g in range(self._batch_size):
+            for i in range(3):
+                if (
+                    self.game_state[g, i * 3]
+                    == self.game_state[g, i * 3 + 1]
+                    == self.game_state[g, i * 3 + 2]
+                    != 0
+                ):
+                    self._winners[g] = self.game_state[g, i * 3]
+            # columns
+            for i in range(3):
+                if (
+                    self.game_state[g, i]
+                    == self.game_state[g, i + 3]
+                    == self.game_state[g, i + 6]
+                    != 0
+                ):
+                    self._winners[g] = self.game_state[g, i]
+            # diagonals
+            if (
+                self.game_state[g, 0]
+                == self.game_state[g, 4]
+                == self.game_state[g, 8]
+                != 0
+            ):
+                self._winners[g] = self.game_state[g, 0]
+            if (
+                self.game_state[g, 2]
+                == self.game_state[g, 4]
+                == self.game_state[g, 6]
+                != 0
+            ):
+                self._winners[g] = self.game_state[g, 2]
+            self._winners[g] = 0
 
     def _reset(self, game_idx: int) -> None:
         self.game_state[game_idx] = np.zeros(9, dtype=np.uint8)
@@ -172,9 +210,51 @@ class TicTacToeEnvSingle:
         self.calc_obs()
         return self.observation, self.reward, self.terminated, self.truncated, self.info
 
+    def step_loop(
+        self, action: np.ndarray
+    ) -> tuple[np.ndarray, float, bool, bool, dict]:
+        # obs, reward, terminated, truncated, info
+        for g in range(self._batch_size):
+            # if illegal move
+            if self.game_state[g, action[g]] > 0:
+                self.reward[g] = -1
+                self.terminated[g] = False
+                self.truncated[g] = False
+                continue
+            # else, player performs the action
+            self.game_state[g, action[g]] = 1
+
+            # check if done (player 1 is always last in tied game)
+            is_done = np.all(self.game_state[g] > 0)
+            self.check_win()
+            if self._winners[g] > 0 or is_done:
+                # winner can only be player 1 else it's a tie
+                self.reward[g] = self._winners[g]
+                self.terminated[g] = True
+                self.truncated[g] = False
+                continue
+
+            # random move by the opponent
+            opponent_action = np.where(self.game_state[g] == 0)[0]
+            opponent_action = np.random.choice(opponent_action)
+            self.game_state[g, opponent_action] = 2
+            self.check_win()
+            if self._winners[g] > 0:
+                # only player 2 can win here
+                self.reward[g] = -1
+                self.terminated[g] = True
+                self.truncated[g] = False
+                continue
+            # else we continue the game
+            self.reward[g] = 0
+            self.terminated[g] = False
+            self.truncated[g] = False
+        self.calc_obs()
+        return self.observation, self.reward, self.terminated, self.truncated, self.info
+
 
 def test():
-    env = TicTacToeEnvSingle()
+    env = TicTacToeEnv()
     obs, info = env.reset()
     print(obs.reshape((3, 6)))
     print(env.nice_print())
@@ -191,7 +271,7 @@ def test():
 
 
 def speed_test(dims=1):
-    env = TicTacToeEnvSingle(batch_size=dims)
+    env = TicTacToeEnv(batch_size=dims)
     pre_time = time.time()
     num_steps = 0
     rng = np.random.default_rng()

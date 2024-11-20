@@ -7,7 +7,7 @@ from collections import deque
 from dataclasses import dataclass
 
 # from c_tictactoe import TicTacToeEnvSingle
-from env_simple import TicTacToeEnvSingle
+from envs.env import TicTacToeEnv
 
 import gymnasium as gym
 import numpy as np
@@ -38,7 +38,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "CartPole-v1"
     """the id of the environment"""
-    total_timesteps: int = 500000
+    total_timesteps: int = 50000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
@@ -76,7 +76,7 @@ class Args:
 
 def make_env(env_id, seed, idx, capture_video, run_name):
     def thunk():
-        env = TicTacToeEnvSingle()
+        env = TicTacToeEnv()
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env.action_space.seed(seed)
 
@@ -112,13 +112,6 @@ if __name__ == "__main__":
     args = tyro.cli(Args)
     assert args.num_envs == 1, "vectorized envs are not supported at the moment"
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{args.compile}__{args.cudagraphs}"
-
-    # wandb.init(
-    #     project="dqn",
-    #     name=f"{os.path.splitext(os.path.basename(__file__))[0]}-{run_name}",
-    #     config=vars(args),
-    #     save_code=True,
-    # )
 
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)

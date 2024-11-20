@@ -5,7 +5,7 @@ import cupy as cp
 import gymnasium
 
 
-class TicTacToeEnvSingle:
+class TicTacToeEnv:
     def __init__(self, batch_size: int = 1) -> None:
         self.observation_space = gymnasium.spaces.Box(
             low=0, high=1, shape=(18,), dtype=cp.uint8
@@ -174,7 +174,7 @@ class TicTacToeEnvSingle:
 
 
 def test():
-    env = TicTacToeEnvSingle()
+    env = TicTacToeEnv()
     obs, info = env.reset()
     print(obs.reshape((3, 6)))
     print(env.nice_print())
@@ -191,7 +191,7 @@ def test():
 
 
 def speed_test(dims=1):
-    env = TicTacToeEnvSingle(batch_size=dims)
+    env = TicTacToeEnv(batch_size=dims)
     pre_time = time.time()
     num_steps = 0
     rng = cp.random.default_rng()
