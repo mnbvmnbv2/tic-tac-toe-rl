@@ -1,12 +1,26 @@
 import time
+from dataclasses import dataclass
+from enum import Enum
 
 import numpy as np
 
 import gymnasium
 
 
+class GameStateSetting(Enum):
+    FLAT = 0
+    GRID = 1
+
+
+@dataclass
+class Settings:
+    game_state: GameStateSetting = GameStateSetting.FLAT
+
+
 class TicTacToeEnv:
-    def __init__(self) -> None:
+    def __init__(self, settings: Settings) -> None:
+        self._settings = settings
+
         self.observation_space = gymnasium.spaces.Box(
             low=0, high=2, shape=(18,), dtype=np.uint8
         )
@@ -16,7 +30,13 @@ class TicTacToeEnv:
         self.num_agents = 1
         self.render_mode = None
 
-        self.game_state = np.zeros((9), dtype=np.uint8)
+        if self._settings.game_state == GameStateSetting.FLAT:
+            self.game_state = np.zeros((9), dtype=np.uint8)
+        elif self._settings.game_state == GameStateSetting.GRID:
+            self.game_state = np.zeros((3, 3), dtype=np.uint8)
+        else:
+            raise ValueError("Invalid game state setting")
+
         self.reward = np.zeros(1, dtype=np.float32)
         self.terminated = np.zeros(1, dtype=bool)
         self.truncated = np.zeros(1, dtype=bool)
@@ -30,13 +50,20 @@ class TicTacToeEnv:
     def close(self) -> None:
         pass
 
-    def calc_obs(self) -> np.ndarray:
-        # flatten one-hot encoding
-        self.observation = (
-            np.eye(3)[self.game_state][:, 1:].flatten().astype(np.uint8)
-            # .reshape(self._batch_size, 18)
-        )
+    def get_obs(self) -> np.ndarray:
+        if self._settings.game_state == GameStateSetting.FLAT:
+            return self._get_obs_flat()
+        elif self._settings.game_state == GameStateSetting.GRID:
+            return self._get_obs_3x3()
+        else:
+            raise ValueError("Invalid game state setting")
 
+    def _get_obs_flat(self) -> np.ndarray:
+        self.observation = np.eye(3)[self.game_state][:, 1:].flatten().astype(np.uint8)
+        return self.observation
+
+    def _get_obs_3x3(self) -> np.ndarray:
+        self.observation = self.game_state.ravel().astype(np.uint8)
         return self.observation
 
     def check_win(self) -> None:
@@ -66,35 +93,51 @@ class TicTacToeEnv:
             self._winners = self.game_state[2]
         self._winners = 0
 
-    def _reset(self) -> None:
-        self.game_state = np.zeros(9, dtype=np.uint8)
+    def check_win_3x3(self) -> int:
+        # 0 for tie, 1 for player 1, 2 for player 2
+        # rows
+        rows_equal = np.all(self.game_state == self.game_state[:, [0]], axis=1) & (
+            self.game_state[:, 0] != 0
+        )
+        if np.any(rows_equal):
+            return self.game_state[rows_equal][0, 0]
+        # columns
+        cols_equal = np.all(self.game_state == self.game_state[[0], :], axis=0) & (
+            self.game_state[0, :] != 0
+        )
+        if np.any(cols_equal):
+            return self.game_state[0, cols_equal][0]
+        # diagonals
+        if self.game_state[0, 0] == self.game_state[1, 1] == self.game_state[2, 2] != 0:
+            return self.game_state[0]
+        if self.game_state[2, 0] == self.game_state[1, 1] == self.game_state[0, 2] != 0:
+            return self.game_state[2]
+        return 0
+
+    def reset(self, seed=None, options=None) -> tuple[np.ndarray, dict]:
+        if self._settings.game_state == GameStateSetting.FLAT:
+            self.game_state = np.zeros(9, dtype=np.uint8)
+        elif self._settings.game_state == GameStateSetting.GRID:
+            self.game_state = np.zeros((3, 3), dtype=np.uint8)
+        else:
+            raise ValueError("Invalid game state setting")
         self.reward = 0
         self.terminated = False
         self.truncated = False
         self.info = {}
-        # :(
-        self.calc_obs()
+        self.get_obs()
 
-    def reset(
-        self,
-        seed,
-        options,
-    ) -> tuple[np.ndarray, dict]:
-        self._reset()
+        return self.get_obs(), {}
 
-        return self.calc_obs(), {}
+    def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict]:
+        if self._settings.game_state == GameStateSetting.FLAT:
+            return self._step_flat(action)
+        elif self._settings.game_state == GameStateSetting.GRID:
+            return self._step_3x3(action)
+        else:
+            raise ValueError("Invalid game state setting")
 
-    def nice_print(self) -> str:
-        return "\n".join(
-            [
-                " ".join(
-                    [[" ", "X", "O"][x] for x in self.game_state[i * 3 : i * 3 + 3]]
-                )
-                for i in range(3)
-            ]
-        )
-
-    def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict]:
+    def _step_flat(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict]:
         # obs, reward, terminated, truncated, info
         # if illegal move
         if self.game_state[action] > 0:
@@ -148,45 +191,86 @@ class TicTacToeEnv:
         self.reward = 0
         self.terminated = False
         self.truncated = False
-        self.calc_obs()
-        return self.observation, self.reward, self.terminated, self.truncated, self.info
+        return self.get_obs(), self.reward, self.terminated, self.truncated, self.info
+
+    def _step_3x3(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict]:
+        # obs, reward, terminated, truncated, info
+        # turn int into (x, y)
+        action = (action // 3, action % 3)
+        # if illegal move
+        if self.game_state[action] > 0:
+            return self.get_obs(), -1, False, False, {}
+        # else, player performs the action
+        self.game_state[action] = 1
+
+        # check if done (player 1 is always last in tied game)
+        is_done = np.all(self.game_state > 0)
+        winner = self.check_win_3x3()
+        if winner > 0 or is_done:
+            match winner:
+                case 0:
+                    reward = 0
+                case 1:
+                    reward = 1
+                case 2:
+                    reward = -1
+            return self.get_obs(), reward, True, False, {}
+
+        # random move by the opponent
+        opponent_action = np.where(self.game_state == 0)[0]
+        opponent_action = np.random.choice(opponent_action)
+        self.game_state[opponent_action] = 2
+        winner = self.check_win_3x3()
+        if winner > 0:
+            # only player 2 can win here
+            return self.get_obs(), -1, True, False, {}
+        # else we continue the game
+        return self.get_obs(), 0, False, False, {}
+
+    # def nice_print(self) -> str:
+    #     return "\n".join(
+    #         [
+    #             " ".join(
+    #                 [[" ", "X", "O"][x] for x in self.game_state[i * 3 : i * 3 + 3]]
+    #             )
+    #             for i in range(3)
+    #         ]
+    #     )
 
 
 def test():
     env = TicTacToeEnv()
     obs, info = env.reset()
-    print(obs.reshape((3, 6)))
-    print(env.nice_print())
     terminated = False
     while not terminated:
         obs, reward, terminated, truncated, info = env.step(
             int(input("Enter action: "))
         )
-        print(obs.reshape((3, 6)))
-        print(env.nice_print())
         if terminated:
             print(f"Game ended with reward {reward}")
             break
 
 
-def speed_test(dims=1):
-    env = TicTacToeEnv(batch_size=dims)
-    pre_time = time.time()
+def speed_test(settings: Settings):
+    print(f"Running speed test with {settings}")
+    env = TicTacToeEnv(settings)
     num_steps = 0
     rng = np.random.default_rng()
-    env.reset_all()
+    env.reset()
+    pre_time = time.time()
     while time.time() - pre_time < 1:
-        action = rng.integers(9, size=env._batch_size)
+        action = rng.integers(0, 9)
         obs, reward, terminated, truncated, info = env.step(action)
         num_steps += 1
         # restart the terminated or truncated games
-        for g in range(dims):
-            if terminated[g] or truncated[g]:
-                env._reset(g)
+        if terminated or truncated:
+            env.reset()
 
-    print(f"Ran {num_steps * dims} steps in 1 second")
+    print(f"Ran {num_steps} steps in 1 second")
 
 
 if __name__ == "__main__":
-    for i in range(10):
-        speed_test(i)
+    settings = Settings(game_state=GameStateSetting.GRID)
+    speed_test(settings)
+    settings = Settings(game_state=GameStateSetting.FLAT)
+    speed_test(settings)
