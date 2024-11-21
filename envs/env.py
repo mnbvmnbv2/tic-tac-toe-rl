@@ -43,8 +43,6 @@ class TicTacToeEnv:
         self.info = {}
         self.observation = np.zeros((18), dtype=np.uint8)
 
-        self._winners = np.zeros(1, dtype=np.uint8)
-
         self.metadata = {"render_modes": []}
 
     def close(self) -> None:
@@ -66,7 +64,7 @@ class TicTacToeEnv:
         self.observation = self.game_state.ravel().astype(np.uint8)
         return self.observation
 
-    def check_win(self) -> None:
+    def _get_win_loop(self) -> int:
         # 0 for tie, 1 for player 1, 2 for player 2
         # rows
         for i in range(3):
@@ -76,7 +74,7 @@ class TicTacToeEnv:
                 == self.game_state[i * 3 + 2]
                 != 0
             ):
-                self._winners = self.game_state[i * 3]
+                return self.game_state[i * 3]
         # columns
         for i in range(3):
             if (
@@ -85,15 +83,15 @@ class TicTacToeEnv:
                 == self.game_state[i + 6]
                 != 0
             ):
-                self._winners = self.game_state[i]
+                return self.game_state[i]
         # diagonals
         if self.game_state[0] == self.game_state[4] == self.game_state[8] != 0:
-            self._winners = self.game_state[0]
+            return self.game_state[0]
         if self.game_state[2] == self.game_state[4] == self.game_state[6] != 0:
-            self._winners = self.game_state[2]
-        self._winners = 0
+            return self.game_state[2]
+        return 0
 
-    def check_win_3x3(self) -> int:
+    def _get_win_3x3(self) -> int:
         # 0 for tie, 1 for player 1, 2 for player 2
         # rows
         rows_equal = np.all(self.game_state == self.game_state[:, [0]], axis=1) & (
@@ -156,10 +154,10 @@ class TicTacToeEnv:
 
         # check if done (player 1 is always last in tied game)
         is_done = np.all(self.game_state > 0)
-        self.check_win()
-        if self._winners > 0 or is_done:
+        winner = self._get_win_loop()
+        if winner > 0 or is_done:
             # winner can only be player 1 else it's a tie
-            self.reward = self._winners
+            self.reward = winner
             self.terminated = True
             self.truncated = False
             return (
@@ -174,8 +172,8 @@ class TicTacToeEnv:
         opponent_action = np.where(self.game_state == 0)[0]
         opponent_action = np.random.choice(opponent_action)
         self.game_state[opponent_action] = 2
-        self.check_win()
-        if self._winners > 0:
+        winner = self._get_win_loop()
+        if winner > 0:
             # only player 2 can win here
             self.reward = -1
             self.terminated = True
@@ -205,7 +203,7 @@ class TicTacToeEnv:
 
         # check if done (player 1 is always last in tied game)
         is_done = np.all(self.game_state > 0)
-        winner = self.check_win_3x3()
+        winner = self._get_win_3x3()
         if winner > 0 or is_done:
             match winner:
                 case 0:
@@ -217,36 +215,50 @@ class TicTacToeEnv:
             return self.get_obs(), reward, True, False, {}
 
         # random move by the opponent
-        opponent_action = np.where(self.game_state == 0)[0]
-        opponent_action = np.random.choice(opponent_action)
-        self.game_state[opponent_action] = 2
-        winner = self.check_win_3x3()
+        opponent_action = np.where(self.game_state == 0)
+        opponent_action_1 = np.random.choice(opponent_action[0])
+        opponent_action_2 = np.random.choice(opponent_action[1])
+        self.game_state[opponent_action_1, opponent_action_2] = 2
+        winner = self._get_win_3x3()
         if winner > 0:
             # only player 2 can win here
             return self.get_obs(), -1, True, False, {}
         # else we continue the game
         return self.get_obs(), 0, False, False, {}
 
-    # def nice_print(self) -> str:
-    #     return "\n".join(
-    #         [
-    #             " ".join(
-    #                 [[" ", "X", "O"][x] for x in self.game_state[i * 3 : i * 3 + 3]]
-    #             )
-    #             for i in range(3)
-    #         ]
-    #     )
+    def nice_print(self) -> str:
+        if self._settings.game_state == GameStateSetting.FLAT:
+            output = "\n".join(
+                [
+                    " ".join(
+                        [[" ", "X", "O"][x] for x in self.game_state[i * 3 : i * 3 + 3]]
+                    )
+                    for i in range(3)
+                ]
+            )
+        elif self._settings.game_state == GameStateSetting.GRID:
+            output = "\n".join(
+                [
+                    " ".join([[" ", "X", "O"][x] for x in self.game_state[i]])
+                    for i in range(3)
+                ]
+            )
+        else:
+            raise ValueError("Invalid game state setting")
+        return output
 
 
-def test():
-    env = TicTacToeEnv()
+def test(settings: Settings):
+    env = TicTacToeEnv(settings)
     obs, info = env.reset()
+    print(env.nice_print())
     terminated = False
     while not terminated:
         obs, reward, terminated, truncated, info = env.step(
             int(input("Enter action: "))
         )
-        if terminated:
+        print(env.nice_print())
+        if terminated or truncated:
             print(f"Game ended with reward {reward}")
             break
 
@@ -270,7 +282,6 @@ def speed_test(settings: Settings):
 
 
 if __name__ == "__main__":
-    settings = Settings(game_state=GameStateSetting.GRID)
-    speed_test(settings)
-    settings = Settings(game_state=GameStateSetting.FLAT)
-    speed_test(settings)
+    speed_test(Settings(game_state=GameStateSetting.GRID))
+    speed_test(Settings(game_state=GameStateSetting.FLAT))
+    # test(Settings(game_state=GameStateSetting.GRID))
