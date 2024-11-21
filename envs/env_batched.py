@@ -1,12 +1,40 @@
 import time
+from dataclasses import dataclass
+from enum import Enum
 
 import numpy as np
 
 import gymnasium
 
 
+class GameStateSetting(Enum):
+    FLAT = 0
+    GRID = 1
+
+
+class WinCheck(Enum):
+    INDEXED = 0
+    GRID = 1
+    LOOP = 2
+
+
+class StepMode(Enum):
+    MASKS = 0
+    LOOP = 1
+    GRID = 2
+
+
+@dataclass
+class Settings:
+    game_state: GameStateSetting = GameStateSetting.FLAT
+    win_check: WinCheck = WinCheck.INDEXED
+    step_mode: StepMode = StepMode.MASKS
+    batch_size: int = 1
+
+
 class TicTacToeEnv:
-    def __init__(self, batch_size: int = 1) -> None:
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
         self.observation_space = gymnasium.spaces.Box(
             low=0, high=1, shape=(18,), dtype=np.uint8
         )
@@ -16,24 +44,46 @@ class TicTacToeEnv:
         self.num_agents = 1
         self.render_mode = None
 
-        self._batch_size = batch_size
+        self._batch_size = self.settings.batch_size
 
-        self.game_state = np.zeros((batch_size, 9), dtype=np.uint8)
+        if self.settings.game_state == GameStateSetting.FLAT:
+            self.game_state = np.zeros((self._batch_size, 9), dtype=np.uint8)
+        elif self.settings.game_state == GameStateSetting.GRID:
+            self.game_state = np.zeros((self._batch_size, 3, 3), dtype=np.uint8)
+        else:
+            raise ValueError("Invalid game state setting")
+
         self.reward = np.zeros(self._batch_size, dtype=np.float32)
         self.terminated = np.zeros(self._batch_size, dtype=bool)
         self.truncated = np.zeros(self._batch_size, dtype=bool)
         self.info = [{} for _ in range(self._batch_size)]
         self.observation = np.zeros((self._batch_size, 18), dtype=np.uint8)
 
-        self._winners = np.zeros(batch_size, dtype=np.uint8)
+        self._winners = np.zeros(self._batch_size, dtype=np.uint8)
 
-    def calc_obs(self) -> None:
-        # flatten one-hot encoding
-        self.observation = (
-            np.eye(3)[self.game_state][:, :, 1:].flatten().reshape(self._batch_size, 18)
-        )
+    def get_obs(self) -> np.ndarray:
+        if self.settings.game_state == GameStateSetting.FLAT:
+            self.observation = (
+                np.eye(3)[self.game_state][:, :, 1:]
+                .flatten()
+                .reshape(self._batch_size, 18)
+            )
+            return self.observation
+        elif self.settings.game_state == GameStateSetting.GRID:
+            self.observation = self.game_state.ravel()
+            return self.observation
+        else:
+            raise ValueError("Invalid game state setting")
 
     def check_win(self) -> None:
+        if self.settings.win_check == WinCheck.GRID:
+            self.check_win_grid()
+        elif self.settings.win_check == WinCheck.LOOP:
+            self.check_win_loops()
+        else:
+            raise ValueError("Invalid game state setting")
+
+    def check_win_grid(self) -> None:
         reshaped_state = self.game_state.reshape(self._batch_size, 3, 3)
         # 0 for tie, 1 for player 1, 2 for player 2
         # rows
@@ -105,32 +155,38 @@ class TicTacToeEnv:
             self._winners[g] = 0
 
     def _reset(self, game_idx: int) -> None:
-        self.game_state[game_idx] = np.zeros(9, dtype=np.uint8)
+        if self.settings.game_state == GameStateSetting.FLAT:
+            self.game_state[game_idx] = np.zeros(9, dtype=np.uint8)
+        elif self.settings.game_state == GameStateSetting.GRID:
+            self.game_state[game_idx] = np.zeros((3, 3), dtype=np.uint8)
+        else:
+            raise ValueError("Invalid game state setting")
         self.reward[game_idx] = 0
         self.terminated[game_idx] = False
         self.truncated[game_idx] = False
         self.info[game_idx] = {}
-        # :(
-        self.calc_obs()
+        # could calculate observation here, but it would be unused
 
     def reset_all(self, seed=None) -> tuple[np.ndarray, dict]:
         # obs, info
         for g in range(self._batch_size):
             self._reset(g)
 
-        return self.calc_obs(), {}
-
-    def nice_print(self) -> str:
-        return "\n".join(
-            [
-                " ".join(
-                    [[" ", "X", "O"][x] for x in self.game_state[i * 3 : i * 3 + 3]]
-                )
-                for i in range(3)
-            ]
-        )
+        return self.get_obs(), {}
 
     def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict]:
+        if self.settings.step_mode == StepMode.MASKS:
+            return self.step_masks(action)
+        elif self.settings.step_mode == StepMode.LOOP:
+            return self.step_loop(action)
+        elif self.settings.step_mode == StepMode.GRID:
+            return self.step_3x3(action)
+        else:
+            raise ValueError("Invalid step mode")
+
+    def step_masks(
+        self, action: np.ndarray
+    ) -> tuple[np.ndarray, float, bool, bool, dict]:
         batch_size = self._batch_size
         indices = np.arange(batch_size)
 
@@ -206,9 +262,7 @@ class TicTacToeEnv:
             self.terminated[active] = False
             self.truncated[active] = False
 
-        # Calculate observations
-        self.calc_obs()
-        return self.observation, self.reward, self.terminated, self.truncated, self.info
+        return self.get_obs(), self.reward, self.terminated, self.truncated, self.info
 
     def step_loop(
         self, action: np.ndarray
@@ -249,46 +303,95 @@ class TicTacToeEnv:
             self.reward[g] = 0
             self.terminated[g] = False
             self.truncated[g] = False
-        self.calc_obs()
-        return self.observation, self.reward, self.terminated, self.truncated, self.info
+
+        return self.get_obs(), self.reward, self.terminated, self.truncated, self.info
+
+    def step_3x3(
+        self, action: np.ndarray
+    ) -> tuple[np.ndarray, float, bool, bool, dict]:
+        # obs, reward, terminated, truncated, info
+        # turn int into (x, y)
+        for g in range(self._batch_size):
+            player_action = np.array([action[g] // 3, action[g] % 3])
+            # if illegal move
+            if self.game_state[g, player_action[0], player_action[1]] > 0:
+                self.reward[g] = -1
+                self.terminated[g] = False
+                self.truncated[g] = False
+                self.info[g] = {}
+            # else, player performs the player_action
+            self.game_state[g, player_action[0], player_action[1]] = 1
+
+            # check if done (player 1 is always last in tied game)
+            is_done = np.all(self.game_state[g, :] > 0)
+            self.check_win()
+            if self._winners[g] > 0 or is_done:
+                match self._winners[g]:
+                    case 0:
+                        reward = 0
+                    case 1:
+                        reward = 1
+                    case 2:
+                        reward = -1
+                self.reward[g] = reward
+                self.terminated[g] = True
+                self.truncated[g] = False
+                self.info[g] = {}
+
+            # random move by the opponent
+            opponent_action = np.where(self.game_state[g, :] == 0)[0]
+            opponent_action = np.random.choice(opponent_action)
+            self.game_state[g, opponent_action] = 2
+            self.check_win()
+            if self._winners[g] > 0:
+                # only player 2 can win here
+                self.reward[g] = -1
+                self.terminated[g] = True
+                self.truncated[g] = False
+                self.info[g] = {}
+            # else we continue the game
+        return self.get_obs(), self.reward, self.terminated, self.truncated, {}
 
 
-def test():
-    env = TicTacToeEnv()
-    obs, info = env.reset()
-    print(obs.reshape((3, 6)))
-    print(env.nice_print())
-    terminated = False
-    while not terminated:
-        obs, reward, terminated, truncated, info = env.step(
-            int(input("Enter action: "))
-        )
-        print(obs.reshape((3, 6)))
-        print(env.nice_print())
-        if terminated:
-            print(f"Game ended with reward {reward}")
-            break
-
-
-def speed_test(dims=1):
-    env = TicTacToeEnv(batch_size=dims)
-    pre_time = time.time()
+def speed_test(settings: Settings) -> None:
+    print(f"Running speed test for {settings}")
+    env = TicTacToeEnv(settings)
     num_steps = 0
     rng = np.random.default_rng()
     env.reset_all()
+    pre_time = time.time()
     while time.time() - pre_time < 1:
         action = rng.integers(9, size=env._batch_size)
         obs, reward, terminated, truncated, info = env.step(action)
         num_steps += 1
         # restart the terminated or truncated games
-        for g in range(dims):
+        for g in range(settings.batch_size):
             if terminated[g] or truncated[g]:
                 env._reset(g)
 
-    print(f"Ran {num_steps * dims} steps in 1 second")
+    print(f"Ran {num_steps * settings.batch_size} steps in 1 second")
 
 
 if __name__ == "__main__":
-    for i in range(50, 500, 20):
-        print(i)
-        speed_test(i)
+    for i in [1, 100]:
+        flat_grid_loop = Settings(
+            game_state=GameStateSetting.FLAT,
+            win_check=WinCheck.GRID,
+            step_mode=StepMode.LOOP,
+            batch_size=i,
+        )
+        speed_test(flat_grid_loop)
+        flat_grid_masks = Settings(
+            game_state=GameStateSetting.FLAT,
+            win_check=WinCheck.GRID,
+            step_mode=StepMode.MASKS,
+            batch_size=i,
+        )
+        speed_test(flat_grid_masks)
+        grid_grid_grid = Settings(
+            game_state=GameStateSetting.GRID,
+            win_check=WinCheck.GRID,
+            step_mode=StepMode.GRID,
+            batch_size=i,
+        )
+        speed_test(grid_grid_grid)
