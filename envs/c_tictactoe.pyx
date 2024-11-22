@@ -91,7 +91,7 @@ cdef class TicTacToeEnv:
 
     # @cython.boundscheck(False)  # Deactivate bounds checking
     # @cython.wraparound(False)   # Deactivate negative indexing.
-    cpdef void step(self, short action):
+    cpdef void step(self, short[:] action):
         # obs, reward, terminated, truncated, info
         cdef short opponent_action
         cdef Py_ssize_t batch_dim
@@ -99,14 +99,16 @@ cdef class TicTacToeEnv:
         cdef int num_available_moves
         cdef int i
         cdef int num_moves_made
+        cdef short current_action
 
         for batch_dim in range(self.game_states.shape[0]):
+            current_action = action[batch_dim]
             # if illegal move
-            if self.game_states[batch_dim, action * 2] > 0 or self.game_states[batch_dim, action * 2 + 1] > 0:
+            if self.game_states[batch_dim, current_action * 2] > 0 or self.game_states[batch_dim, current_action * 2 + 1] > 0:
                 self.rewards[batch_dim] = -1
             
-            # else, player performs the action
-            self.game_states[batch_dim, action * 2] = 1
+            # else, player performs the current_action
+            self.game_states[batch_dim, current_action * 2] = 1
 
             # check if done (player 1 is always last in tied game)
             for i in range(9):
@@ -142,10 +144,3 @@ cdef class TicTacToeEnv:
                     self.done[batch_dim] = 1
 
             # else we continue the game
-
-    # def nice_print(self):
-    #     cdef int i
-    #     rows = []
-    #     for i in range(3):
-    #         rows.append(" ".join([[" ", "X", "O"][x] for x in self.game_states[i * 3 : i * 3 + 3]]))
-    #     return "\n".join(rows)
