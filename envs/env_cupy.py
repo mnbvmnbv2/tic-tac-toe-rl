@@ -82,16 +82,6 @@ class TicTacToeEnv:
 
         return self.calc_obs(), {}
 
-    def nice_print(self) -> str:
-        return "\n".join(
-            [
-                " ".join(
-                    [[" ", "X", "O"][x] for x in self.game_state[i * 3 : i * 3 + 3]]
-                )
-                for i in range(3)
-            ]
-        )
-
     def step(self, action: cp.ndarray) -> tuple[cp.ndarray, float, bool, bool, dict]:
         batch_size = self._batch_size
         indices = cp.arange(batch_size)
@@ -173,29 +163,18 @@ class TicTacToeEnv:
         return self.observation, self.reward, self.terminated, self.truncated, self.info
 
 
-def test():
-    env = TicTacToeEnv()
-    obs, info = env.reset()
-    print(obs.reshape((3, 6)))
-    print(env.nice_print())
-    terminated = False
-    while not terminated:
-        obs, reward, terminated, truncated, info = env.step(
-            int(input("Enter action: "))
-        )
-        print(obs.reshape((3, 6)))
-        print(env.nice_print())
-        if terminated:
-            print(f"Game ended with reward {reward}")
-            break
-
-
 def speed_test(dims=1):
-    env = TicTacToeEnv(batch_size=dims)
-    pre_time = time.time()
-    num_steps = 0
     rng = cp.random.default_rng()
+    env = TicTacToeEnv(batch_size=dims)
+    # warmup
+    for _ in range(10):
+        env.reset_all()
+        action = rng.integers(9, size=env._batch_size)
+        obs, reward, terminated, truncated, info = env.step(action)
+    # speed test
+    num_steps = 0
     env.reset_all()
+    pre_time = time.time()
     while time.time() - pre_time < 1:
         action = rng.integers(9, size=env._batch_size)
         obs, reward, terminated, truncated, info = env.step(action)
@@ -209,6 +188,6 @@ def speed_test(dims=1):
 
 
 if __name__ == "__main__":
-    for i in range(25, 500, 25):
+    for i in range(1, 500, 25):
         print(i)
         speed_test(i)
