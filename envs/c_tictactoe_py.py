@@ -42,8 +42,22 @@ class TicTacToeEnvPy:
 
         self.metadata = {"render_modes": []}
 
-    def reset(self) -> tuple[np.ndarray, list[dict]]:
-        self._env.reset()
+    def reset_all(self) -> tuple[np.ndarray, list[dict]]:
+        self._env.reset_all()
+        # self.game_states[:] = 0
+        # self.rewards[:] = 0
+        # self.done[:] = 0
+        # self.winners[:] = 0
+
+        return self.game_states, self.infos
+
+    def reset(self, idx: int) -> tuple[np.ndarray, list[dict]]:
+        self._env.reset(idx)
+        # self.game_states[idx, :] = 0
+        # self.rewards[idx] = 0
+        # self.done[idx] = 0
+        # self.winners[idx] = 0
+
         return self.game_states, self.infos
 
     def step(
@@ -57,17 +71,17 @@ def speed_test(dim=1):
     env = TicTacToeEnvPy(Settings(batch_size=dim))
     pre_time = time.time()
     num_steps = 0
+    env.reset_all()
     while time.time() - pre_time < 1:
-        env.reset()
-        while not env.done[0]:
-            # print(done)
-            # print(game_states)
-            env.step(np.random.randint(9, size=(dim,), dtype=np.int16))
-            num_steps += 1
+        env.step(np.random.randint(9, size=(dim,), dtype=np.int16))
+        num_steps += 1
+        for i in range(dim):
+            if env.done[i]:
+                env.reset(i)
     print(f"Ran {num_steps * dim} steps in 1 seconds")
 
 
 if __name__ == "__main__":
-    for i in range(1, 25):
+    for i in range(1, 12):
         print(f"dim={i}")
         speed_test(i)

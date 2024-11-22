@@ -93,12 +93,18 @@ cdef class TicTacToeEnv:
                 ):
                     self.winners[batch_dim] = i + 1
 
-    cpdef void reset(self):
-        # obs, info
+    cpdef void reset_all(self):
         self.game_states[:, :] = 0
         self.rewards[:] = 0
         self.done[:] = 0
         self.winners[:] = 0
+
+    cpdef void reset(self, Py_ssize_t idx):
+        # obs, info
+        self.game_states[idx, :] = 0
+        self.rewards[idx] = 0
+        self.done[idx] = 0
+        self.winners[idx] = 0
 
     # @cython.boundscheck(False)  # Deactivate bounds checking
     # @cython.wraparound(False)   # Deactivate negative indexing.
