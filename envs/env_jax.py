@@ -80,103 +80,70 @@ class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
         params: EnvParams,
     ) -> step_return:
         # Check for illegal move
-        return lax.cond(
-            state.board[action[0]] != 0,
-            lambda: self.handle_illegal_move(params, state),
-            lambda: self.perform_player_move(key, state, action, params),
-        )
 
-    def perform_player_move(
-        self, key: jax.random.PRNGKey, state: EnvState, action: int, params: EnvParams
-    ) -> step_return:
-        # Update board with player move
-        new_board = state.board.at[action].set(1)
-        new_state = EnvState(state.time, new_board)
-        winner = self.check_win(new_state)
+        # Check for illegal moves
+        illegal_move = state.board[action[0]] > 0
+        # self.reward[illegal_move] = -1
+        # self.terminated[illegal_move] = False
+        # self.truncated[illegal_move] = False
 
-        # Check if player won or if it's a tie
-        player_wins = winner == 1
-        is_tie = jnp.all(new_board > 0)
+        # Player performs the action
+        player_moved_board = state.board.at(action[0]).set(1)
 
-        return lax.cond(
-            player_wins,
-            lambda: (
-                self.get_obs(new_state),
-                new_state,
-                jnp.array(params.rew_win),
-                True,
-                {},
-            ),
-            lambda: lax.cond(
-                is_tie,
-                lambda: (
-                    self.get_obs(new_state),
-                    new_state,
-                    jnp.array(params.rew_tie),
-                    True,
-                    {},
-                ),
-                lambda: self.perform_opponent_move(key, new_state, params),
-            ),
-        )
+        # Check if done (player 1 is always last in tied game)
+        is_done = jnp.all(player_moved_board > 0)
 
-    def perform_opponent_move(
-        self, key: jax.random.PRNGKey, state: EnvState, params: EnvParams
-    ) -> step_return:
-        # Create a mask for legal moves (1 for legal, 0 for illegal)
-        legal_moves_mask = (state.board == 0).astype(jnp.float32)
+        # Update winners
+        self.check_win()
 
-        # Count available moves
-        num_legal_moves = legal_moves_mask.sum()
+        # Determine games that are done
+        done = ((self._winners > 0) | is_done) & active
 
-        # Ensure there's at least one legal move to prevent division errors
-        def choose_move(_):
-            # Randomly select a legal move
-            probabilities = legal_moves_mask / num_legal_moves
-            return jax.random.choice(key, a=jnp.arange(9), p=probabilities)
+        # Map winners to rewards
+        reward_mapping = np.array([0, 1, -1])  # Index corresponds to winner number
+        self.reward[done] = reward_mapping[self._winners[done]]
+        self.terminated[done] = True
+        self.truncated[done] = False
 
-        opponent_action = lax.cond(
-            num_legal_moves > 0,
-            choose_move,
-            lambda _: -1,  # Return -1 if no legal moves are available (should not happen in normal play)
-            operand=None,
-        )
+        # Update active games
+        active = active & (~done)
 
-        # Update board with opponent move if a valid move was chosen
-        new_board = lax.cond(
-            opponent_action >= 0,
-            lambda action: state.board.at[action].set(2),
-            lambda _: state.board,
-            operand=opponent_action,
-        )
-        new_state = EnvState(state.time, new_board)
-        winner = self.check_win(new_state)
+        # Random move by the opponent for active games
+        if np.any(active):
+            active_indices = indices[active]
+            # Get available positions
+            available_positions = self.game_state[active] == 0
+            num_available = np.sum(available_positions, axis=1)
 
-        # Check if opponent won or if it's a tie
-        opponent_wins = winner == 2
-        is_tie = jnp.all(new_board > 0)
+            # Generate random indices for selection
+            random_indices = np.floor(
+                np.random.rand(active_indices.size) * num_available
+            ).astype(np.int32)
 
-        return lax.cond(
-            opponent_wins,
-            lambda: (
-                self.get_obs(new_state),
-                new_state,
-                jnp.array(params.rew_loss),
-                True,
-                {},
-            ),
-            lambda: lax.cond(
-                is_tie,
-                lambda: (
-                    self.get_obs(new_state),
-                    new_state,
-                    jnp.array(params.rew_tie),
-                    True,
-                    {},
-                ),
-                lambda: (self.get_obs(new_state), new_state, jnp.array(0), False, {}),
-            ),
-        )
+            # Compute opponent actions
+            cumsum_positions = np.cumsum(available_positions, axis=1)
+            opponent_actions = np.zeros(active_indices.size, dtype=np.int32)
+            for i in range(active_indices.size):
+                pos = np.searchsorted(cumsum_positions[i], random_indices[i] + 1)
+                opponent_actions[i] = pos
+            self.game_state[active_indices, opponent_actions] = 2
+
+            # Update winners after opponent's move
+            self.check_win()
+
+            # Check if opponent won
+            opponent_won = (self._winners > 0) & active
+            self.reward[opponent_won] = -1
+            self.terminated[opponent_won] = True
+            self.truncated[opponent_won] = False
+
+            # Update active games
+            active = active & (~opponent_won)
+
+            # For remaining active games
+            self.reward[active] = 0
+            self.terminated[active] = False
+            self.truncated[active] = False
 
     def reset_env(
         self,
