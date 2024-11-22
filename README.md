@@ -21,6 +21,7 @@ The env is simplified to a Single Agent env where the player is always player 1 
 
 - Numpy
 - Numpy naive env batching
+- Numba
 - Cython
 - Cupy
 - Jax (Craftax)
