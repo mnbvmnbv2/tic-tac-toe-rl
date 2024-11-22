@@ -56,8 +56,8 @@ cdef class TicTacToeEnv:
                         != 0
                     ):
                         self.winners[batch_dim] = i + 1
-            # columns
-            for i in range(2):
+                        continue
+                # columns
                 for j in range(3):
                     x = j * 2 + i
                     y = j * 2 + 6 + i
@@ -69,17 +69,28 @@ cdef class TicTacToeEnv:
                         != 0
                     ):
                         self.winners[batch_dim] = i + 1
-            # diagonals
-            for i in range(2):
+                        continue
+                # diagonals
                 x = i
                 y = i + 8
                 z = i + 16
-                if self.game_states[batch_dim, x] == self.game_states[batch_dim, y] == self.game_states[batch_dim, z] != 0:
+                if (
+                    self.game_states[batch_dim, x]
+                    == self.game_states[batch_dim, y]
+                    == self.game_states[batch_dim, z]
+                    != 0
+                ):
                     self.winners[batch_dim] = i + 1
+                    continue
                 x = i + 4
                 y = i + 8
                 z = i + 12
-                if self.game_states[batch_dim, x] == self.game_states[batch_dim, y] == self.game_states[batch_dim, z] != 0:
+                if (
+                    self.game_states[batch_dim, x]
+                    == self.game_states[batch_dim, y]
+                    == self.game_states[batch_dim, z]
+                    != 0
+                ):
                     self.winners[batch_dim] = i + 1
 
     cpdef void reset(self):
@@ -106,6 +117,7 @@ cdef class TicTacToeEnv:
             # if illegal move
             if self.game_states[batch_dim, current_action * 2] > 0 or self.game_states[batch_dim, current_action * 2 + 1] > 0:
                 self.rewards[batch_dim] = -1
+                continue
             
             # else, player performs the current_action
             self.game_states[batch_dim, current_action * 2] = 1
@@ -125,6 +137,7 @@ cdef class TicTacToeEnv:
                 else:
                     self.rewards[batch_dim] = -1
                 self.done[batch_dim] = 1
+                continue
 
             # Collect all available moves
             num_available_moves = 0
