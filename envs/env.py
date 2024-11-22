@@ -107,9 +107,9 @@ class TicTacToeEnv:
             return self.game_state[0, cols_equal][0]
         # diagonals
         if self.game_state[0, 0] == self.game_state[1, 1] == self.game_state[2, 2] != 0:
-            return self.game_state[0]
+            return self.game_state[0, 0]
         if self.game_state[2, 0] == self.game_state[1, 1] == self.game_state[0, 2] != 0:
-            return self.game_state[2]
+            return self.game_state[2, 0]
         return 0
 
     def reset(self, seed=None, options=None) -> tuple[np.ndarray, dict]:
@@ -216,9 +216,10 @@ class TicTacToeEnv:
 
         # random move by the opponent
         opponent_action = np.where(self.game_state == 0)
-        opponent_action_1 = np.random.choice(opponent_action[0])
-        opponent_action_2 = np.random.choice(opponent_action[1])
-        self.game_state[opponent_action_1, opponent_action_2] = 2
+        opponent_idx = np.random.choice(len(opponent_action[0]))
+        self.game_state[
+            opponent_action[0][opponent_idx], opponent_action[1][opponent_idx]
+        ] = 2
         winner = self._get_win_3x3()
         if winner > 0:
             # only player 2 can win here
