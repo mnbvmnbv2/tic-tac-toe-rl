@@ -46,10 +46,10 @@ class RolloutWrapper(object):
             """lax.scan compatible step transition in jax env."""
             obs, state, policy_params, rng, cum_reward, valid_mask = state_input
             rng, rng_step, rng_net = jax.random.split(rng, 3)
-            if self.model_forward is not None:
-                action = self.model_forward(policy_params, obs, rng_net)
-            else:
-                action = self.env.action_space(self.env_params).sample(rng_net)
+            # if self.model_forward is not None:
+            #     action = self.model_forward(policy_params, obs, rng_net)
+            # else:
+            action = self.env.action_space(self.env_params).sample(rng_net)
             next_obs, next_state, reward, done, _ = self.env.step(
                 rng_step, state, action, self.env_params
             )
