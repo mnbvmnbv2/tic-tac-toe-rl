@@ -6,6 +6,9 @@ import jax
 import jax.numpy as jnp
 from jax import lax
 from gymnax.environments import environment, spaces
+from env_jax_helper import RolloutWrapper
+import numpy as np
+import gymnax
 
 
 @struct.dataclass
@@ -70,7 +73,13 @@ class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
         return winner  # Returns 1 if player wins, 2 if opponent wins, 0 otherwise
 
     def handle_illegal_move(self, params: EnvParams, state: EnvState) -> step_return:
-        return self.get_obs(state), state, jnp.array(params.rew_illegal), True, {}
+        return (
+            lax.stop_gradient(self.get_obs(state)),
+            lax.stop_gradient(state),
+            jnp.array(params.rew_illegal),
+            True,
+            {},
+        )
 
     def step_env(
         self,
@@ -101,8 +110,8 @@ class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
         return lax.cond(
             player_wins,
             lambda: (
-                self.get_obs(new_state),
-                new_state,
+                lax.stop_gradient(self.get_obs(new_state)),
+                lax.stop_gradient(new_state),
                 jnp.array(params.rew_win),
                 True,
                 {},
@@ -110,8 +119,8 @@ class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
             lambda: lax.cond(
                 is_tie,
                 lambda: (
-                    self.get_obs(new_state),
-                    new_state,
+                    lax.stop_gradient(self.get_obs(new_state)),
+                    lax.stop_gradient(new_state),
                     jnp.array(params.rew_tie),
                     True,
                     {},
@@ -159,8 +168,8 @@ class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
         return lax.cond(
             opponent_wins,
             lambda: (
-                self.get_obs(new_state),
-                new_state,
+                lax.stop_gradient(self.get_obs(new_state)),
+                lax.stop_gradient(new_state),
                 jnp.array(params.rew_loss),
                 True,
                 {},
@@ -168,8 +177,8 @@ class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
             lambda: lax.cond(
                 is_tie,
                 lambda: (
-                    self.get_obs(new_state),
-                    new_state,
+                    lax.stop_gradient(self.get_obs(new_state)),
+                    lax.stop_gradient(new_state),
                     jnp.array(params.rew_tie),
                     True,
                     {},
@@ -269,11 +278,63 @@ def step_speed_test(rng, env, env_params, duration=1.0):
     print(f"Ran {steps} steps in {duration:.4f}s")
 
 
+def speed_gymnax_random(env, env_params, num_env_steps, num_envs, rng):
+    manager = RolloutWrapper(
+        env,
+        env_params,
+        num_env_steps,
+    )
+
+    # Multiple rollouts for same network (different rng, e.g. eval)
+    rng, rng_batch = jax.random.split(rng)
+    rng_batch_eval = jax.random.split(rng_batch, num_envs).squeeze()
+    if num_envs == 1:
+        rollout_fn = manager.single_rollout
+        obs, action, reward, next_obs, done, cum_ret = rollout_fn(rng_batch_eval, None)
+        steps_per_batch = obs.shape[0]
+    else:
+        rollout_fn = manager.batch_rollout
+        obs, action, reward, next_obs, done, cum_ret = rollout_fn(rng_batch_eval, None)
+        steps_per_batch = obs.shape[0] * obs.shape[1]
+    step_counter = 0
+
+    start_t = time.time()
+    # Loop over batch/single episode rollouts until steps are collected
+    while step_counter < num_env_steps:
+        rng, rng_batch = jax.random.split(rng)
+        rng_batch_eval = jax.random.split(rng_batch, num_envs).squeeze()
+        _ = rollout_fn(rng_batch_eval, None)
+        step_counter += steps_per_batch
+    return time.time() - start_t
+
+
 if __name__ == "__main__":
     print(jax.devices())
     # test()
     # env, env_params = gymnax.make("CartPole-v1")
     env, env_params = TicTacToeEnv(), EnvParams()
+    num_envs = 1
+    num_env_steps = 100_000
 
     rng = jax.random.PRNGKey(0)
     step_speed_test(rng, env, env_params)
+
+    rng = jax.random.PRNGKey(0)
+
+    run_times = []
+    for run_id in range(5):
+        rng, rng_run = jax.random.split(rng)
+        r_time = speed_gymnax_random(
+            env,
+            env_params,
+            num_env_steps,
+            num_envs,
+            rng_run,
+        )
+
+        # Store the computed run time
+        print(f"Run {run_id + 1} - Done after {r_time}")
+        run_times.append(r_time)
+    print(run_times)
+    print(f"Mean run time: {np.mean(run_times)}")
+    print(f"Std run time: {np.std(run_times)}")
