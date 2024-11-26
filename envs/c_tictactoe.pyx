@@ -163,3 +163,34 @@ cdef class TicTacToeEnv:
                     self.done[batch_dim] = 1
 
             # else we continue the game
+
+
+cpdef check_winner(board: short[:, ::1]):
+    cdef int winner = 0
+    cdef int i, j, x, y, z
+
+    # rows
+    for j in range(3):
+        x = j * 3
+        y = j * 3 + 1
+        z = j * 3 + 2
+        if (board[x] == board[y] == board[z] != 0):
+            return board[x]
+    # columns
+    for j in range(3):
+        x = j
+        y = j + 3
+        z = j + 6
+        if (board[x] == board[y] == board[z] != 0 ):
+            return board[x]
+    # diagonals
+    x = 0
+    y = 4
+    z = 8
+    if (board[x] == board[y] == board[z] != 0 ):
+        return board[x]
+    x = 2
+    y = 4
+    z = 6
+    if (board[x] == board[y] == board[z] != 0):
+        return board[x]
