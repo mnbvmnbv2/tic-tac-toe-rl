@@ -165,7 +165,7 @@ cdef class TicTacToeEnv:
             # else we continue the game
 
 
-cpdef check_winner(board: short[:, ::1]):
+cpdef int check_winner(board: short[:, ::1]):
     cdef int winner = 0
     cdef int i, j, x, y, z
 
