@@ -22,6 +22,7 @@ step_return = tuple[chex.Array, EnvState, jnp.ndarray, jnp.ndarray, dict]
 
 @struct.dataclass
 class EnvParams(environment.EnvParams):
+    max_steps_in_episode: int = 5
     rew_win: int = 1
     rew_loss: int = -1
     rew_tie: int = 0
