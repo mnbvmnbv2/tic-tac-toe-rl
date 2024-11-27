@@ -9,6 +9,7 @@ from gymnax.environments import environment, spaces
 from env_jax_helper import RolloutWrapper
 import numpy as np
 import gymnax
+import functools
 
 
 @struct.dataclass
@@ -57,20 +58,15 @@ class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
             ],
             dtype=jnp.int32,
         )
+        # Gather the board values at the win condition indices
+        lines = board[win_conditions]  # Shape: (8, 3)
 
-        def check_line(winner, line):
-            line_win = lax.cond(
-                (board[line[0]] == board[line[1]])
-                & (board[line[1]] == board[line[2]])
-                & (board[line[0]] != 0),
-                lambda: board[line[0]].astype(jnp.int32),  # Ensuring int32 output
-                lambda: jnp.array(0, dtype=jnp.int32),  # Ensuring int32 output
-            )
-            return jnp.maximum(winner, line_win), None
+        # Check if all elements in a line are equal and not zero
+        lines_equal = (lines == lines[:, [0]]) & (lines[:, 0:1] != 0)
+        winners = lines[:, 0] * jnp.all(lines_equal, axis=1)
 
-        # Use `jnp.array(0)` as the initial carry value, which represents "no winner"
-        winner, _ = lax.scan(check_line, jnp.array(0), win_conditions)
-        return winner  # Returns 1 if player wins, 2 if opponent wins, 0 otherwise
+        # Return the maximum winner (1 or 2 if there's a winner, 0 otherwise)
+        return jnp.max(winners)
 
     def handle_illegal_move(self, params: EnvParams, state: EnvState) -> step_return:
         return (
@@ -81,11 +77,11 @@ class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
             {},
         )
 
-    def step_env(
+    def step_env_(
         self,
         key: jax.random.PRNGKey,
         state: EnvState,
-        action: jnp.ndarray,
+        action: int,
         params: EnvParams,
     ) -> step_return:
         # Check for illegal move
@@ -187,20 +183,22 @@ class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
             ),
         )
 
-    def step_env_experimental(
+    # _experimental
+    @functools.partial(jax.jit, static_argnums=(0,))
+    def step_env(
         self,
         key: jax.random.PRNGKey,
         state: EnvState,
-        action: jnp.ndarray,
+        action: int,
         params: EnvParams,
     ) -> step_return:
         # Check for illegal move
-
-        # Check for illegal moves
         illegal_move = state.board[action] > 0
 
+        reward = jnp.where(illegal_move, params.rew_illegal, 0)
+
         # Player performs the action
-        player_moved_board = state.board.at(action).set(1)
+        player_moved_board = state.board.at[action].set(1)
 
         # Check if done (player 1 is always last in tied game)
         is_done = jnp.all(player_moved_board > 0)
@@ -208,21 +206,55 @@ class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
         # Update winners
         winner = self.check_win(player_moved_board)
 
-        # Determine if game is done
-        done_1 = winner > 0 and is_done
-
+        # Don't need to determine if game is done in gymnax configuration
+        reward = jnp.where(
+            jnp.logical_and(jnp.logical_not(illegal_move), winner == 1),
+            params.rew_win,
+            reward,
+        )
         # Get available positions
         available_positions = player_moved_board == 0
-        # choose random position
-        random_indices = jax.random.randint(key, (1,), 0, available_positions.sum())[0]
-        opponent_action = jnp.where(available_positions)[0][random_indices]
-        opponent_moved_board = player_moved_board.at(opponent_action).set(2)
+
+        # Sample opponent action using Gumbel-max trick
+        def sample_opponent_action(key, available_positions):
+            u = jax.random.uniform(
+                key, shape=available_positions.shape, minval=1e-6, maxval=1.0
+            )
+            gumbel_noise = -jnp.log(-jnp.log(u))
+            masked_gumbel = jnp.where(available_positions, gumbel_noise, -jnp.inf)
+            opponent_action = jnp.argmax(masked_gumbel)
+            no_available_positions = jnp.all(jnp.logical_not(available_positions))
+            opponent_action = jnp.where(no_available_positions, -1, opponent_action)
+            return opponent_action
+
+        opponent_action = sample_opponent_action(key, available_positions)
+
+        # Apply opponent's move if valid
+        opponent_moved_board = jax.lax.cond(
+            opponent_action >= 0,
+            lambda board: board.at[opponent_action].set(2),
+            lambda board: board,
+            player_moved_board,
+        )
 
         # Update winners after opponent's move
-        winner2 = self.check_win()
+        winner2 = self.check_win(opponent_moved_board)
 
-        # Check if opponent won
-        opponent_won = winner2 > 0
+        reward = jnp.where(
+            jnp.logical_and(jnp.logical_not(is_done), winner2 == 2),
+            params.rew_loss,
+            reward,
+        )
+
+        state = EnvState(state.time + 1, opponent_moved_board)
+
+        return (
+            lax.stop_gradient(self.get_obs(state)),
+            lax.stop_gradient(state),
+            reward,
+            is_done,
+            {},
+        )
 
     def reset_env(
         self,
@@ -278,11 +310,11 @@ def step_speed_test(rng, env, env_params, duration=1.0):
     print(f"Ran {steps} steps in {duration:.4f}s")
 
 
-def speed_gymnax_random(env, env_params, num_env_steps, num_envs, rng):
+def speed_gymnax_random(env, env_params, num_envs, rng):
     manager = RolloutWrapper(
         env,
         env_params,
-        num_env_steps,
+        # num_env_steps,
     )
 
     # Multiple rollouts for same network (different rng, e.g. eval)
@@ -300,12 +332,12 @@ def speed_gymnax_random(env, env_params, num_env_steps, num_envs, rng):
 
     start_t = time.time()
     # Loop over batch/single episode rollouts until steps are collected
-    while step_counter < num_env_steps:
+    while time.time() < start_t + 1:
         rng, rng_batch = jax.random.split(rng)
         rng_batch_eval = jax.random.split(rng_batch, num_envs).squeeze()
         _ = rollout_fn(rng_batch_eval, None)
         step_counter += steps_per_batch
-    return time.time() - start_t
+    return step_counter
 
 
 if __name__ == "__main__":
@@ -313,28 +345,30 @@ if __name__ == "__main__":
     # test()
     # env, env_params = gymnax.make("CartPole-v1")
     env, env_params = TicTacToeEnv(), EnvParams()
+    obs, state = env.reset_env(jax.random.PRNGKey(0), env_params)
+    # env.step_env_experimental(jax.random.PRNGKey(0), state, 0, env_params)
     num_envs = 1
-    num_env_steps = 100_000
+    # num_env_steps = 100_000
 
     rng = jax.random.PRNGKey(0)
     step_speed_test(rng, env, env_params)
 
     rng = jax.random.PRNGKey(0)
 
-    run_times = []
+    num_steps = []
     for run_id in range(5):
         rng, rng_run = jax.random.split(rng)
-        r_time = speed_gymnax_random(
+        num_steps_ = speed_gymnax_random(
             env,
             env_params,
-            num_env_steps,
+            # num_env_steps,
             num_envs,
             rng_run,
         )
 
-        # Store the computed run time
-        print(f"Run {run_id + 1} - Done after {r_time}")
-        run_times.append(r_time)
-    print(run_times)
-    print(f"Mean run time: {np.mean(run_times)}")
-    print(f"Std run time: {np.std(run_times)}")
+        # Store the computed SPSs
+        print(f"Run {run_id + 1} - With {num_steps_} SPS")
+        num_steps.append(num_steps_)
+    print(num_steps)
+    print(f"Mean SPS: {np.mean(num_steps)}")
+    print(f"Std SPS: {np.std(num_steps)}")
