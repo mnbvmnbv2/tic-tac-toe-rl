@@ -77,6 +77,7 @@ class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
             {},
         )
 
+    @functools.partial(jax.jit, static_argnums=(0,))
     def step_env_(
         self,
         key: jax.random.PRNGKey,
@@ -286,30 +287,6 @@ class TicTacToeEnv(environment.Environment[EnvState, EnvParams]):
         return spaces.Box(low=0, high=2, shape=(9,))
 
 
-# Define function to perform step speed test
-def step_speed_test(rng, env, env_params, duration=1.0):
-    rng, reset_rng, step_rng, action_rng = jax.random.split(rng, 4)
-    _, state = env.reset_env(reset_rng, env_params)
-    print(state)
-    # state = EnvState(time=0, board=jnp.zeros((9), dtype=jnp.int32))
-    # Warm-up to compile the function
-    pre_compile = time.time()
-    jit_step = jax.jit(env.step_env)
-    action = jax.random.randint(action_rng, 1, 0, env.num_actions)[0]
-    _ = jit_step(step_rng, state, action, env_params)
-    env.reset_env(reset_rng, env_params)
-    print(f"Compilation time: {time.time() - pre_compile:.4f}s")
-
-    start_time = time.time()
-    steps = 0
-    while time.time() - start_time < duration:
-        rng, step_rng, action_rng = jax.random.split(rng, 3)
-        action = jax.random.randint(action_rng, 1, 0, env.num_actions)[0]
-        state = jit_step(step_rng, state, action, env_params)[1]
-        steps += 1
-    print(f"Ran {steps} steps in {duration:.4f}s")
-
-
 def speed_gymnax_random(env, env_params, num_envs, rng):
     manager = RolloutWrapper(
         env,
@@ -349,9 +326,6 @@ if __name__ == "__main__":
     # env.step_env_experimental(jax.random.PRNGKey(0), state, 0, env_params)
     num_envs = 1
     # num_env_steps = 100_000
-
-    rng = jax.random.PRNGKey(0)
-    step_speed_test(rng, env, env_params)
 
     rng = jax.random.PRNGKey(0)
 
