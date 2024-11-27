@@ -13,13 +13,13 @@ class RolloutWrapper(object):
         self,
         env: gymnax.environments.environment.Environment,
         env_params: gymnax.environments.environment.EnvParams,
-        num_env_steps: int,
+        # num_env_steps: int,
     ):
         """Wrapper to define batch evaluation for generation parameters."""
         # Define the RL environment & network forward function
         self.env = env
         self.env_params = env_params
-        self.num_env_steps = num_env_steps
+        # self.num_env_steps = num_env_steps
 
     @functools.partial(jax.jit, static_argnums=(0,))
     def population_rollout(self, rng_eval, policy_params):
