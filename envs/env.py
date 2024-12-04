@@ -21,9 +21,16 @@ class TicTacToeEnv:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
 
-        self.observation_space = gymnasium.spaces.Box(
-            low=0, high=2, shape=(18,), dtype=np.uint8
-        )
+        if self._settings.game_state == GameStateSetting.FLAT:
+            self.observation_space = gymnasium.spaces.Box(
+                low=0, high=2, shape=(18,), dtype=np.uint8
+            )
+        elif self._settings.game_state == GameStateSetting.GRID:
+            self.observation_space = gymnasium.spaces.Box(
+                low=0, high=2, shape=(3, 3), dtype=np.uint8
+            )
+        else:
+            raise ValueError("Invalid game state setting")
         self.action_space = gymnasium.spaces.Discrete(9)
         self.single_observation_space = self.observation_space
         self.single_action_space = self.action_space
@@ -41,7 +48,12 @@ class TicTacToeEnv:
         self.terminated = np.zeros(1, dtype=bool)
         self.truncated = np.zeros(1, dtype=bool)
         self.info = {}
-        self.observation = np.zeros((18), dtype=np.uint8)
+        if self._settings.game_state == GameStateSetting.FLAT:
+            self.observation = np.zeros((18), dtype=np.uint8)
+        elif self._settings.game_state == GameStateSetting.GRID:
+            self.observation = np.zeros((3, 3), dtype=np.uint8)
+        else:
+            raise ValueError("Invalid game state setting")
 
         self.metadata = {"render_modes": []}
 
@@ -61,7 +73,7 @@ class TicTacToeEnv:
         return self.observation
 
     def _get_obs_3x3(self) -> np.ndarray:
-        self.observation = self.game_state.ravel().astype(np.uint8)
+        self.observation = self.game_state.reshape((3, 3)).astype(np.uint8)
         return self.observation
 
     def _get_win_loop(self) -> int:
@@ -250,6 +262,7 @@ class TicTacToeEnv:
 
 
 def test(settings: Settings):
+    """Human input"""
     env = TicTacToeEnv(settings)
     obs, info = env.reset()
     print(env.nice_print())
@@ -265,6 +278,7 @@ def test(settings: Settings):
 
 
 def speed_test(settings: Settings):
+    """Single env random policy steps per second test"""
     print(f"Running speed test with {settings}")
     env = TicTacToeEnv(settings)
     num_steps = 0
@@ -282,7 +296,27 @@ def speed_test(settings: Settings):
     print(f"Ran {num_steps} steps in 1 second")
 
 
+def vector_test(settings: Settings, num_envs: int = 10):
+    """Vector env random policy steps per second test"""
+    print(f"Running speed test with {settings}")
+    envs = gymnasium.vector.SyncVectorEnv([lambda: TicTacToeEnv(settings)] * num_envs)
+    num_steps = 0
+    obs, info = envs.reset()
+    pre_time = time.time()
+    while time.time() - pre_time < 1:
+        action = envs.action_space.sample()
+        obs, reward, terminated, truncated, info = envs.step(action)
+        num_steps += 1
+        # syncvectorenv has autoreset. This uses up a step, but we don't ahve to manually reset
+
+    print(f"Ran {num_steps * num_envs} steps in 1 second")
+
+
 if __name__ == "__main__":
     speed_test(Settings(game_state=GameStateSetting.GRID))
     speed_test(Settings(game_state=GameStateSetting.FLAT))
     # test(Settings(game_state=GameStateSetting.GRID))
+    # for i in range(1, 11):
+    #     vector_test(Settings(game_state=GameStateSetting.GRID), num_envs=i)
+    # for i in range(1, 11):
+    #     vector_test(Settings(game_state=GameStateSetting.FLAT), num_envs=i)
