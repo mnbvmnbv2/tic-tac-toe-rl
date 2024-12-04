@@ -35,6 +35,9 @@ The env is simplified to a Single Agent env where the player is always player 1 
 - LeanRL
 - PureJAXrl
 - PufferEnv
+- Pytorch RL
+- Stablebaselines 3
+- Ray Rllib
 
 ## Testing/Benchmarking
 
