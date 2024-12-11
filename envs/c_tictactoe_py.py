@@ -79,7 +79,35 @@ def speed_test(dim=1):
     print(f"Ran {num_steps * dim} steps in 1 seconds")
 
 
+def memory_test(dim=1, n_steps=5):
+    state_buffer = np.zeros((n_steps, dim, 18), dtype=np.int16)
+    reward_buffer = np.zeros((n_steps, dim), dtype=np.int16)
+    done_buffer = np.zeros((n_steps, dim), dtype=np.int16)
+    action_buffer = np.zeros((n_steps, dim), dtype=np.int16)
+    env = TicTacToeEnvPy(Settings(batch_size=dim))
+    env.reset_all()
+    for i in range(n_steps):
+        actions = np.random.randint(9, size=(dim,), dtype=np.int16)
+        env.step(actions)
+        state_buffer[i] = env.game_states
+        reward_buffer[i] = env.rewards
+        done_buffer[i] = env.done
+        action_buffer[i] = actions
+    print(f"Ran {i + 1} steps with dim={dim}")
+
+    print(f"state_buffer: {state_buffer.nbytes / 1024} KB")
+    print(f"reward_buffer: {reward_buffer.nbytes / 1024} KB")
+    print(f"done_buffer: {done_buffer.nbytes / 1024} KB")
+    print(f"action_buffer: {action_buffer.nbytes / 1024} KB")
+
+    print(f"State buffer: {state_buffer}")
+    print(f"Reward buffer: {reward_buffer}")
+    print(f"Done buffer: {done_buffer}")
+    print(f"Action buffer: {action_buffer}")
+
+
 if __name__ == "__main__":
-    for i in range(1, 101, 10):
-        print(f"dim={i}")
-        speed_test(i)
+    # for i in range(1, 101, 10):
+    #     print(f"dim={i}")
+    #     speed_test(i)
+    memory_test(100, 100_000)  # 100_000)
