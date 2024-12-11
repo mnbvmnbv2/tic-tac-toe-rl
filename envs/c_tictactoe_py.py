@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 import gymnasium
 import numpy as np
+import torch
 
 from c_tictactoe import TicTacToeEnv
 
@@ -67,13 +68,27 @@ class TicTacToeEnvPy:
         return self.game_states, self.rewards, self.done, self.infos
 
 
-def speed_test(dim=1):
+def speed_test(dim=1, nn=False):
     env = TicTacToeEnvPy(Settings(batch_size=dim))
+    if nn:
+        model = MLP(dim)
+        model.eval()
+
     pre_time = time.time()
     num_steps = 0
     env.reset_all()
     while time.time() - pre_time < 1:
-        env.step(np.random.randint(9, size=(dim,), dtype=np.int16))
+        if nn:
+            actions = (
+                model(torch.tensor(env.game_states, dtype=torch.float32))
+                .argmax(dim=1, keepdim=True)
+                .squeeze()
+                .numpy(force=True)
+                .astype(np.int16)
+            )
+        else:
+            actions = np.random.randint(9, size=(dim,), dtype=np.int16)
+        env.step(actions)
         num_steps += 1
         # we have auto-reset in the env
     print(f"Ran {num_steps * dim} steps in 1 seconds")
@@ -106,8 +121,24 @@ def memory_test(dim=1, n_steps=5):
     print(f"Action buffer: {action_buffer}")
 
 
+class MLP(torch.nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.fc1 = torch.nn.Linear(18, 64)
+        self.fc2 = torch.nn.Linear(64, 64)
+        self.fc3 = torch.nn.Linear(64, 9)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+
 if __name__ == "__main__":
     # for i in range(1, 101, 10):
     #     print(f"dim={i}")
     #     speed_test(i)
-    memory_test(100, 100_000)  # 100_000)
+    speed_test(100, nn=True)
+    # memory_test(100, 100_000)  # 100_000)
+    # print(torch.cuda.is_available())
