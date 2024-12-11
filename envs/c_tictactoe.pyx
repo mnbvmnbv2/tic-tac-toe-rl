@@ -33,65 +33,63 @@ cdef class TicTacToeEnv:
 
     # @cython.boundscheck(False)  # Deactivate bounds checking
     # @cython.wraparound(False)   # Deactivate negative indexing.
-    cdef void check_win(self):
+    cdef void check_win(self, Py_ssize_t game):
         # 0 for tie, 1 for player 1, 2 for player 2
         cdef short i
         cdef short j
         cdef Py_ssize_t x
         cdef Py_ssize_t y
         cdef Py_ssize_t z
-        cdef Py_ssize_t batch_dim
 
-        for batch_dim in range(self.game_states.shape[0]):
-            # rows
-            for i in range(2):
-                for j in range(3):
-                    x = j * 6 + i
-                    y = j * 6 + 2 + i
-                    z = j * 6 + 4 + i
-                    if (
-                        self.game_states[batch_dim, x]
-                        == self.game_states[batch_dim, y]
-                        == self.game_states[batch_dim, z]
-                        != 0
-                    ):
-                        self.winners[batch_dim] = i + 1
-                        continue
-                # columns
-                for j in range(3):
-                    x = j * 2 + i
-                    y = j * 2 + 6 + i
-                    z = j * 2 + 12 + i
-                    if (
-                        self.game_states[batch_dim, x]
-                        == self.game_states[batch_dim, y]
-                        == self.game_states[batch_dim, z]
-                        != 0
-                    ):
-                        self.winners[batch_dim] = i + 1
-                        continue
-                # diagonals
-                x = i
-                y = i + 8
-                z = i + 16
+        # rows
+        for i in range(2):
+            for j in range(3):
+                x = j * 6 + i
+                y = j * 6 + 2 + i
+                z = j * 6 + 4 + i
                 if (
-                    self.game_states[batch_dim, x]
-                    == self.game_states[batch_dim, y]
-                    == self.game_states[batch_dim, z]
+                    self.game_states[game, x]
+                    == self.game_states[game, y]
+                    == self.game_states[game, z]
                     != 0
                 ):
-                    self.winners[batch_dim] = i + 1
+                    self.winners[game] = i + 1
                     continue
-                x = i + 4
-                y = i + 8
-                z = i + 12
+            # columns
+            for j in range(3):
+                x = j * 2 + i
+                y = j * 2 + 6 + i
+                z = j * 2 + 12 + i
                 if (
-                    self.game_states[batch_dim, x]
-                    == self.game_states[batch_dim, y]
-                    == self.game_states[batch_dim, z]
+                    self.game_states[game, x]
+                    == self.game_states[game, y]
+                    == self.game_states[game, z]
                     != 0
                 ):
-                    self.winners[batch_dim] = i + 1
+                    self.winners[game] = i + 1
+                    continue
+            # diagonals
+            x = i
+            y = i + 8
+            z = i + 16
+            if (
+                self.game_states[game, x]
+                == self.game_states[game, y]
+                == self.game_states[game, z]
+                != 0
+            ):
+                self.winners[game] = i + 1
+                continue
+            x = i + 4
+            y = i + 8
+            z = i + 12
+            if (
+                self.game_states[game, x]
+                == self.game_states[game, y]
+                == self.game_states[game, z]
+                != 0
+            ):
+                self.winners[game] = i + 1
 
     cpdef void reset_all(self):
         self.game_states[:, :] = 0
@@ -119,6 +117,11 @@ cdef class TicTacToeEnv:
         cdef short current_action
 
         for batch_dim in range(self.game_states.shape[0]):
+            # auto-reset
+            if self.done[batch_dim]:
+                self.reset(batch_dim)
+                continue
+
             current_action = action[batch_dim]
             # if illegal move
             if self.game_states[batch_dim, current_action * 2] > 0 or self.game_states[batch_dim, current_action * 2 + 1] > 0:
@@ -134,7 +137,7 @@ cdef class TicTacToeEnv:
                     num_moves_made += 1
             if num_moves_made == 9:
                 self.done[batch_dim] = 1
-            self.check_win()
+            self.check_win(batch_dim)
             if self.winners[batch_dim] > 0 or self.done[batch_dim]:
                 if self.winners[batch_dim] == 0:
                     self.rewards[batch_dim] = 0
@@ -156,7 +159,7 @@ cdef class TicTacToeEnv:
             if num_available_moves > 0:
                 opponent_action = available_moves[rand() % num_available_moves]
                 self.game_states[batch_dim, opponent_action * 2 + 1] = 1
-                self.check_win()
+                self.check_win(batch_dim)
                 if self.winners[batch_dim] > 0:
                     # only player 2 can win here
                     self.rewards[batch_dim] = -1

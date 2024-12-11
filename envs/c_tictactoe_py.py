@@ -75,13 +75,11 @@ def speed_test(dim=1):
     while time.time() - pre_time < 1:
         env.step(np.random.randint(9, size=(dim,), dtype=np.int16))
         num_steps += 1
-        for i in range(dim):
-            if env.done[i]:
-                env.reset(i)
+        # we have auto-reset in the env
     print(f"Ran {num_steps * dim} steps in 1 seconds")
 
 
 if __name__ == "__main__":
-    for i in range(1, 12):
+    for i in range(1, 101, 10):
         print(f"dim={i}")
         speed_test(i)
