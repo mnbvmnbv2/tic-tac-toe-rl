@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Playing around with reinforcement learning in tic-tac-toe"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = [
+
+[project.optional-dependencies]
+jax-group = [
     "chex>=0.1.87",
     "cython>=3.0.11",
     "flax>=0.10.2",
@@ -16,10 +18,23 @@ dependencies = [
     "setuptools>=74.1.2",
     "tqdm>=4.66.6",
 ]
+torchrl-group = [
+    "tensordict>=0.6.1",
+    "torch>=2.5.1",
+    "torchrl>=0.6.0",
+    "tyro>=0.8.14",
+    "tqdm>=4.66.6",
+]
+pufferlib-group = ["pufferlib"]
+
+dependencies = ["jupyterlab>=4.2.5", "numba>=0.60.0"]
+
+[tool.uv]
+conflicts = [
+    [
+        { extra = "jax-group" },
+        { extra = "pufferlib-group" },
+        { extra = "torchrl-group" },
+    ],
+]
 # cupy-cuda12x
-# gymnasium
-# "tensordict>=0.6.1",
-# "torch>=2.5.1",
-# "torchrl>=0.6.0",
-# "tqdm>=4.66.6",
-# "tyro>=0.8.14",
