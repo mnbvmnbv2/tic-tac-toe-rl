@@ -117,11 +117,8 @@ cdef class TicTacToeEnv:
         cdef short current_action
 
         for batch_dim in range(self.game_states.shape[0]):
-            # auto-reset
             if self.done[batch_dim]:
                 self.reset(batch_dim)
-                continue
-
             current_action = action[batch_dim]
             # if illegal move
             if self.game_states[batch_dim, current_action * 2] > 0 or self.game_states[batch_dim, current_action * 2 + 1] > 0:
@@ -137,6 +134,7 @@ cdef class TicTacToeEnv:
                     num_moves_made += 1
             if num_moves_made == 9:
                 self.done[batch_dim] = 1
+                self.game_states[batch_dim, :] = 0
             self.check_win(batch_dim)
             if self.winners[batch_dim] > 0 or self.done[batch_dim]:
                 if self.winners[batch_dim] == 0:
@@ -146,6 +144,7 @@ cdef class TicTacToeEnv:
                 else:
                     self.rewards[batch_dim] = -1
                 self.done[batch_dim] = 1
+                self.game_states[batch_dim, :] = 0
                 continue
 
             # Collect all available moves
@@ -164,6 +163,7 @@ cdef class TicTacToeEnv:
                     # only player 2 can win here
                     self.rewards[batch_dim] = -1
                     self.done[batch_dim] = 1
+                    self.game_states[batch_dim, :] = 0
 
             # else we continue the game
 
