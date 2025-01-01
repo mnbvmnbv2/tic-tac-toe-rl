@@ -117,6 +117,7 @@ cdef class TicTacToeEnv:
         cdef short current_action
 
         for batch_dim in range(self.game_states.shape[0]):
+            num_moves_made = 0
             if self.done[batch_dim]:
                 self.reset(batch_dim)
             current_action = action[batch_dim]
