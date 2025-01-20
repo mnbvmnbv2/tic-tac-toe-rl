@@ -19,6 +19,8 @@ makes it a bit more challenging.
 
 The env is simplified to a Single Agent env where the player is always player 1 and the opponent is a random policy.
 
+I have also made a "PVP" version where there are two agents and it truly is a sequenntial MA-env.
+
 - Numpy
 - Numpy naive env batching
 - Numba
@@ -51,3 +53,5 @@ The env is simplified to a Single Agent env where the player is always player 1 
 For UV cython compilation:
 
 `uv run python setup.py build_ext --inplace`
+Then
+You need to move the generated files into the folders for correct import.
