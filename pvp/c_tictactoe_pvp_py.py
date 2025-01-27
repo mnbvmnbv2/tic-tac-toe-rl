@@ -5,7 +5,7 @@ import gymnasium
 import numpy as np
 import torch
 
-from c_tictactoe_pvp import TicTacToePVPEnv
+from pvp.c_tictactoe_pvp import TicTacToePVPEnv
 
 
 @dataclass
@@ -16,19 +16,19 @@ class Settings:
 class TicTacToeEnvPy:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-
         self._batch_size = settings.batch_size
 
+        # 19 = 9*2 bits + 1 for current_player
         self.observation_space = gymnasium.spaces.Box(
-            low=0, high=2, shape=(19,), dtype=np.uint8
+            low=0, high=2, shape=(19,), dtype=np.int16
         )
         self.action_space = gymnasium.spaces.Discrete(9)
         self.single_observation_space = self.observation_space
         self.single_action_space = self.action_space
-        self.num_agents = 1
         self.render_mode = None
 
         self.game_states = np.zeros((self._batch_size, 19), dtype=np.int16)
+        # For multi-agent rewards, shape = (batch_size, 2)
         self.rewards = np.zeros((self._batch_size, 2), dtype=np.int16)
         self.done = np.zeros((self._batch_size), dtype=np.int16)
         self.winners = np.zeros((self._batch_size), dtype=np.int16)
@@ -43,19 +43,20 @@ class TicTacToeEnvPy:
 
         self.metadata = {"render_modes": []}
 
-    def reset_all(self) -> tuple[np.ndarray, list[dict]]:
+    def reset_all(self):
         self._env.reset_all()
-
         return self.game_states, self.infos
 
-    def reset(self, idx: int) -> tuple[np.ndarray, list[dict]]:
+    def reset(self, idx: int):
         self._env.reset(idx)
-
         return self.game_states, self.infos
 
-    def step(
-        self, action: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[dict]]:
+    def step(self, action: np.ndarray):
+        """
+        action should be shape (batch_size,) or something broadcastable.
+        returns (states, rewards, done, infos).
+        Each row of `rewards` is [rX, rO].
+        """
         self._env.step(action)
         return self.game_states, self.rewards, self.done, self.infos
 
