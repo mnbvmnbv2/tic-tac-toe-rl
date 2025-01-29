@@ -54,3 +54,6 @@ For UV cython compilation:
 
 `uv run python setup.py build_ext --inplace`
 Then you need to move the generated files into the folders for correct import.
+
+For testing
+`uv run pytest`
