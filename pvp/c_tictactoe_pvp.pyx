@@ -123,13 +123,19 @@ cdef class TicTacToePVPEnv:
 
         for batch_dim in range(self.states.shape[0]):
             num_moves_made = 0
-            if self.done[batch_dim]:
-                # clear all before start of enxt game
-                self.reset(batch_dim)
 
             current_action = action[batch_dim]
             # get players turn
             player = self.states[batch_dim, 18] # 0 for X, 1 for O
+
+            # we reset the winners flag if it is set and it is player X's turn
+            if self.winners[batch_dim] > 0 and player == 0:
+                self.winners[batch_dim] = 0
+
+            # we reset the done flag if it is set and it is player O's turn
+            if self.done[batch_dim] and player == 1:
+                self.done[batch_dim] = 0
+
             # if illegal move
             if self.states[batch_dim, current_action * 2] > 0 or self.states[batch_dim, current_action * 2 + 1] > 0:
                 # done
@@ -154,16 +160,15 @@ cdef class TicTacToePVPEnv:
                 self.states[batch_dim, :] = 0
 
             self.check_win(batch_dim)
-            if self.winners[batch_dim] > 0 or self.done[batch_dim]:
-                if self.winners[batch_dim] == 0:
-                    self.rewards[batch_dim, :] = 0
-                elif self.winners[batch_dim] == 1:
+            if self.winners[batch_dim] > 0:
+                if self.winners[batch_dim] == 1:
                     # X won => reward X=+1, O=-1
                     self.rewards[batch_dim, 0] = 1
                     self.rewards[batch_dim, 1] = -1
-                else:
+                elif self.winners[batch_dim] == 2:
                     # O won => O=+1, X=-1
                     self.rewards[batch_dim, 0] = -1
                     self.rewards[batch_dim, 1] = 1
                 # done
                 self.done[batch_dim] = 1
+                self.states[batch_dim, :] = 0

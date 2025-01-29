@@ -75,13 +75,13 @@ def test_main():
     assert np.array_equal(done, np.array([0, 0, 0], dtype=np.int16))
 
     # --- 3 ---
-    state, reward, done, info = env.step(np.array([2, 8, 3], dtype=np.int16))
+    state, reward, done, info = env.step(np.array([3, 8, 3], dtype=np.int16))
 
     assert np.array_equal(
         state,
         np.array(
             [
-                [1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
                 [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
                 [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
             ],
@@ -108,7 +108,7 @@ def test_main():
         state,
         np.array(
             [
-                [1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
                 [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
                 [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0],
             ],
@@ -127,3 +127,57 @@ def test_main():
         ),
     )
     assert np.array_equal(done, np.array([0, 0, 0], dtype=np.int16))
+
+    # --- 5 ---
+    state, reward, done, info = env.step(np.array([6, 8, 4], dtype=np.int16))
+
+    assert np.array_equal(
+        state,
+        np.array(
+            [
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1],
+            ],
+            dtype=np.int16,
+        ),
+    )
+    assert np.array_equal(
+        reward,
+        np.array(
+            [
+                [1, -1],
+                [-1, 0],
+                [0, 0],
+            ],
+            dtype=np.int16,
+        ),
+    )
+    assert np.array_equal(done, np.array([1, 0, 0], dtype=np.int16))
+
+    # --- 6 ---
+    state, reward, done, info = env.step(np.array([0, 2, 5], dtype=np.int16))
+
+    assert np.array_equal(
+        state,
+        np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0],
+            ],
+            dtype=np.int16,
+        ),
+    )
+    assert np.array_equal(
+        reward,
+        np.array(
+            [
+                [0, -1],
+                [-1, 0],
+                [0, 0],
+            ],
+            dtype=np.int16,
+        ),
+    )
+    assert np.array_equal(done, np.array([1, 0, 0], dtype=np.int16))
