@@ -5,11 +5,14 @@
 # cython: cdivision=True
 # distutils: extra_compile_args=/openmp
 # distutils: extra_link_args=/openmp
+
 cimport cython
 cimport numpy as cnp
 
-# state is 19 long, one hot for 9 spaces and final denotes player 1 (0) or 2 (1)
-# in this mode, illegal move does not end the game
+# State is length=19: 9 * 2 bits for board occupancy + 1 for current player (0 or 1).
+# states[:, 0..17] => pairs for each cell:
+#    cell i => (states[env, 2*i], states[env, 2*i+1])
+# states[:, 18] => current player (0 if it's X's turn, 1 if it's O's turn).
 
 cdef class TicTacToePVPEnv:
     cdef:
@@ -30,10 +33,12 @@ cdef class TicTacToePVPEnv:
         self.done = done
         self.winners = winners
 
-    # @cython.boundscheck(False)  # Deactivate bounds checking
-    # @cython.wraparound(False)   # Deactivate negative indexing.
     cdef void check_win(self, Py_ssize_t game):
-        # 0 for tie, 1 for player 1, 2 for player 2
+        """
+        0 for tie, 1 for player X, 2 for player O
+        We interpret states[game, 2*i] as X in cell i, 
+        and states[game, 2*i+1] as O in cell i.
+        """
         cdef short i
         cdef short j
         cdef Py_ssize_t x
@@ -106,11 +111,12 @@ cdef class TicTacToePVPEnv:
     # @cython.boundscheck(False)  # Deactivate bounds checking
     # @cython.wraparound(False)   # Deactivate negative indexing.
     cpdef void step(self, short[:] action):
-        # obs, reward, terminated, truncated, info
+        """
+        action is shape (batch_size,) - one action per environment.
+        We apply the move for the current player, ignoring illegal moves by giving -1 reward 
+        but continuing until someone wins or the board is full.
+        """
         cdef Py_ssize_t batch_dim
-        cdef int player_turn
-        cdef int[9] available_moves
-        cdef int num_available_moves
         cdef int i
         cdef int num_moves_made
         cdef short current_action
@@ -122,7 +128,8 @@ cdef class TicTacToePVPEnv:
                 self.reset(batch_dim)
 
             current_action = action[batch_dim]
-            player = self.states[batch_dim, 18]
+            # get players turn
+            player = self.states[batch_dim, 18] # 0 for X, 1 for O
             # if illegal move
             if self.states[batch_dim, current_action * 2] > 0 or self.states[batch_dim, current_action * 2 + 1] > 0:
                 # done
@@ -131,6 +138,8 @@ cdef class TicTacToePVPEnv:
             
             # else, player performs the current_action
             self.states[batch_dim, current_action * 2 + player] = 1
+            # reset reward in case it previously was -1 for example
+            self.rewards[batch_dim, player] = 0
 
             # switch player
             self.states[batch_dim, 18] = 1 - player
@@ -140,22 +149,21 @@ cdef class TicTacToePVPEnv:
                 if self.states[batch_dim, i * 2] > 0 or self.states[batch_dim, i * 2 + 1] > 0:
                     num_moves_made += 1
             if num_moves_made == 9:
-                # done
+                # done, board is filled
                 self.done[batch_dim] = 1
                 self.states[batch_dim, :] = 0
+
             self.check_win(batch_dim)
             if self.winners[batch_dim] > 0 or self.done[batch_dim]:
                 if self.winners[batch_dim] == 0:
                     self.rewards[batch_dim, :] = 0
                 elif self.winners[batch_dim] == 1:
+                    # X won => reward X=+1, O=-1
                     self.rewards[batch_dim, 0] = 1
                     self.rewards[batch_dim, 1] = -1
                 else:
+                    # O won => O=+1, X=-1
                     self.rewards[batch_dim, 0] = -1
                     self.rewards[batch_dim, 1] = 1
                 # done
                 self.done[batch_dim] = 1
-                self.states[batch_dim, :] = 0
-
-            # else we continue the game
-
