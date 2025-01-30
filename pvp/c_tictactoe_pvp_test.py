@@ -127,6 +127,146 @@ scenario_1 = {
             ),
             "expected_done": np.array([1, 0, 0], dtype=np.int16),
         },
+        {
+            "actions": np.array([3, 0, 2], dtype=np.int16),
+            "expected_state": np.array(
+                [
+                    [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+                    [0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_reward": np.array(
+                [
+                    [0, 0],
+                    [0, 0],
+                    [0, 0],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_done": np.array([0, 0, 0], dtype=np.int16),
+        },
+        {
+            "actions": np.array([1, 8, 0], dtype=np.int16),
+            "expected_state": np.array(
+                [
+                    [1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+                    [0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_reward": np.array(
+                [
+                    [0, 0],
+                    [0, -1],
+                    [0, 0],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_done": np.array([0, 0, 0], dtype=np.int16),
+        },
+        {
+            "actions": np.array([4, 0, 7], dtype=np.int16),
+            "expected_state": np.array(
+                [
+                    [1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_reward": np.array(
+                [
+                    [0, 0],
+                    [0, -1],
+                    [0, 0],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_done": np.array([0, 0, 1], dtype=np.int16),
+        },
+        {
+            "actions": np.array([8, 2, 0], dtype=np.int16),
+            "expected_state": np.array(
+                [
+                    [1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_reward": np.array(
+                [
+                    [0, 0],
+                    [0, -1],
+                    [0, 0],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_done": np.array([0, 0, 1], dtype=np.int16),
+        },
+        {
+            "actions": np.array([5, 3, 0], dtype=np.int16),
+            "expected_state": np.array(
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_reward": np.array(
+                [
+                    [-1, 1],
+                    [0, 0],
+                    [0, -1],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_done": np.array([1, 0, 0], dtype=np.int16),
+        },
+        {
+            "actions": np.array([5, 3, 1], dtype=np.int16),
+            "expected_state": np.array(
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                    [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_reward": np.array(
+                [
+                    [0, 1],
+                    [-1, 0],
+                    [0, 0],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_done": np.array([1, 0, 0], dtype=np.int16),
+        },
+        {
+            "actions": np.array([0, 0, 0], dtype=np.int16),
+            "expected_state": np.array(
+                [
+                    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                    [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_reward": np.array(
+                [
+                    [0, 0],
+                    [-1, 0],
+                    [-1, 0],
+                ],
+                dtype=np.int16,
+            ),
+            "expected_done": np.array([0, 0, 0], dtype=np.int16),
+        },
     ],
 }
 
