@@ -106,36 +106,53 @@ function step!(env::TicTacToeEnv, actions::Vector{Int16})
             if env.winners[i] == 1
                 env.rewards[i] = 1
             end
-            env.game_states[i, :] = 0
+            env.game_states[i, :] .= 0
             continue
         end
 
         available_moves = Vector{Int}(undef, 9)
         num_available_moves = 0
-        for j in 0:8
-            pos1 = j * 2 + 1  # player 1's marker
-            pos2 = j * 2 + 2  # player 2's marker
+        for j in 1:9
+            pos1 = j * 2 - 1  # player 1's marker
+            pos2 = j * 2  # player 2's marker
             if env.game_states[i, pos1] == 0 && env.game_states[i, pos2] == 0
                 num_available_moves += 1
-                available_moves[num_available_moves] = i
+                available_moves[num_available_moves] = j
             end
         end
         opponent_action = available_moves[rand(1:num_available_moves)]
-        println(opponent_action)
         opponent_idx = opponent_action * 2
-        println(opponent_idx)
         env.game_states[i, opponent_idx] = 1
         check_win!(env, i)
         if env.winners[i] != 0
             env.rewards[i] = -1
             env.done[i] = true
-            env.game_states[i, :] = 0
+            env.game_states[i, :] .= 0
         end
     end
 end
 
-env = TicTacToeEnv(3)
-check_win!(env, 1)
-println(env.game_states)
-step!(env, Int16[2, 3, 1])
-println(env.game_states)
+# Benchmarking function: runs a fixed number of steps and times them.
+function run_benchmark(batch_size::Int, num_steps::Int)
+    env = TicTacToeEnv(batch_size)
+
+    # Warm-up iterations (to compile and “warm-up” the JIT)
+    for _ in 1:100
+        actions = rand(Int16(1):Int16(9), batch_size)
+        step!(env, actions)
+    end
+
+    start_time = time()
+    for _ in 1:num_steps
+        actions = rand(Int16(1):Int16(9), batch_size)
+        step!(env, actions)
+    end
+    elapsed = time() - start_time
+    steps_per_sec = num_steps * batch_size / elapsed
+    println("Batch size: $batch_size -> $steps_per_sec steps per second")
+end
+
+# Run benchmarks for different batch sizes
+for batch in [1, 10, 100, 1000]
+    run_benchmark(batch, 10_000)
+end
