@@ -1,17 +1,17 @@
 using Random
 
 mutable struct TicTacToeEnv
-    game_states::Matrix{Int16}
-    rewards::Array{Int16}
+    game_states::Matrix{Int8}
+    rewards::Array{Int8}
     done::Array{Bool}
-    winners::Array{Int16}
+    winners::Array{Int8}
 end
 
 function TicTacToeEnv(batch_size::Int=1)
-    game_states = zeros(Int16, batch_size, 18)
-    rewards = zeros(Int16, batch_size)
+    game_states = zeros(Int8, batch_size, 18)
+    rewards = zeros(Int8, batch_size)
     done = falses(batch_size)
-    winners = zeros(Int16, batch_size)
+    winners = zeros(Int8, batch_size)
 
     return TicTacToeEnv(game_states, rewards, done, winners)
 end
@@ -40,7 +40,7 @@ function check_win!(env::TicTacToeEnv, game_idx::Int)
             end
         end
         # columns
-        for j in 0:2
+        for j::Int in 0:2
             x = j * 2 + i + 1
             y = j * 2 + 6 + i + 1
             z = j * 2 + 12 + i + 1
@@ -81,8 +81,8 @@ end
 
 
 
-function step!(env::TicTacToeEnv, actions::Vector{Int16})
-    for i in 1:size(env.game_states, 1)
+function step!(env::TicTacToeEnv, actions::Vector{Int8})
+    Threads.@threads for i::Int in 1:size(env.game_states, 1)
         if env.done[i]
             reset!(env)
             continue
@@ -110,9 +110,9 @@ function step!(env::TicTacToeEnv, actions::Vector{Int16})
             continue
         end
 
-        available_moves = Vector{Int}(undef, 9)
+        available_moves = Array{Int8}(undef, 9)
         num_available_moves = 0
-        for j in 1:9
+        for j::Int in 1:9
             pos1 = j * 2 - 1  # player 1's marker
             pos2 = j * 2  # player 2's marker
             if env.game_states[i, pos1] == 0 && env.game_states[i, pos2] == 0
@@ -138,13 +138,13 @@ function run_benchmark(batch_size::Int, num_steps::Int)
 
     # Warm-up iterations (to compile and “warm-up” the JIT)
     for _ in 1:100
-        actions = rand(Int16(1):Int16(9), batch_size)
+        actions = rand(Int8(1):Int8(9), batch_size)
         step!(env, actions)
     end
 
     start_time = time()
     for _ in 1:num_steps
-        actions = rand(Int16(1):Int16(9), batch_size)
+        actions = rand(Int8(1):Int8(9), batch_size)
         step!(env, actions)
     end
     elapsed = time() - start_time
