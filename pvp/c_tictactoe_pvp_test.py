@@ -742,3 +742,150 @@ def test_tictactoe_scenario(scenario):
             reward, exp_reward
         ), f"Mismatch in reward at step {step_idx}"
         assert np.array_equal(done, exp_done), f"Mismatch in done at step {step_idx}"
+
+
+def test_tictactoe_rollout():
+    batch_size = 3
+    num_steps = 13
+    env = TicTacToeEnvPy(Settings(batch_size=batch_size))
+    state, _ = env.reset_all()
+
+    # Allocate rollout buffers for X and O.
+    x_states = np.zeros((num_steps, batch_size, 19), dtype=np.float16)
+    x_actions = np.zeros((num_steps, batch_size), dtype=np.int32)
+    x_rewards = np.zeros((num_steps, batch_size), dtype=np.float32)
+    x_dones = np.zeros((num_steps, batch_size), dtype=np.int16)
+    # For each environment we will record transitions only on timesteps where it is X’s turn.
+    x_ptr = np.zeros(batch_size, dtype=np.int32)
+
+    o_states = np.zeros((num_steps, batch_size, 19), dtype=np.float16)
+    o_actions = np.zeros((num_steps, batch_size), dtype=np.int32)
+    o_rewards = np.zeros((num_steps, batch_size), dtype=np.float32)
+    o_dones = np.zeros((num_steps, batch_size), dtype=np.int16)
+    o_ptr = np.zeros(batch_size, dtype=np.int32)
+
+    rollout_actions = [
+        [0, 2, 8],
+        [1, 2, 1],
+        [3, 8, 3],
+        [7, 8, 6],
+        [6, 8, 4],
+        [0, 2, 5],
+        [3, 0, 2],
+        [1, 8, 0],
+        [4, 0, 7],
+        [8, 2, 0],
+        [5, 3, 0],
+        [5, 3, 1],
+        [0, 0, 0],
+    ]
+
+    reward = np.zeros((batch_size, 2), dtype=np.float32)
+    done = np.zeros(batch_size, dtype=np.int16)
+
+    for step_action in rollout_actions:
+        player_turns = state[:, 18].astype(int)
+        x_envs = np.where(player_turns == 0)[0]
+        o_envs = np.where(player_turns == 1)[0]
+        actions = np.array(step_action, dtype=np.int16)
+        for e in x_envs:
+            t = x_ptr[e]
+            if t < num_steps:
+                x_states[t, e] = state[e]
+                x_actions[t, e] = actions[e]
+                x_rewards[t, e] = reward[e, 0]
+                x_dones[t, e] = done[e]
+                x_ptr[e] += 1
+        for e in o_envs:
+            t = o_ptr[e]
+            if t < num_steps:
+                o_states[t, e] = state[e]
+                o_actions[t, e] = actions[e]
+                o_rewards[t, e] = reward[e, 1]
+                o_dones[t, e] = done[e]
+                o_ptr[e] += 1
+
+        state, reward, done, _ = env.step(np.array(actions, dtype=np.int16))
+
+    # Check buffer
+    assert np.array_equal(
+        x_states[:7, :],
+        np.array(
+            [
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ],
+                [
+                    [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                ],
+                [
+                    [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                    [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0],
+                ],
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                    [0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0],
+                ],
+                [
+                    [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                    [0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0],
+                ],
+                [
+                    [1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ],
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                    [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ],
+            ]
+        ),
+    )
+
+    assert np.array_equal(
+        o_states[:6, :],
+        np.array(
+            [
+                [
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+                ],
+                [
+                    [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+                ],
+                [
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+                    [0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1],
+                ],
+                [
+                    [1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+                    [0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1],
+                ],
+                [
+                    [1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                ],
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                ],
+            ],
+            dtype=np.float16,
+        ),
+    )
