@@ -130,21 +130,15 @@ cdef class TicTacToeEnv:
             self.game_states[batch_dim, current_action * 2] = 1
 
             # check if done (player 1 is always last in tied game)
+            self.check_win(batch_dim)
             for i in range(9):
                 if self.game_states[batch_dim, i * 2] > 0 or self.game_states[batch_dim, i * 2 + 1] > 0:
                     num_moves_made += 1
             if num_moves_made == 9:
                 self.done[batch_dim] = 1
-                self.game_states[batch_dim, :] = 0
-            self.check_win(batch_dim)
             if self.winners[batch_dim] > 0 or self.done[batch_dim]:
-                if self.winners[batch_dim] == 0:
-                    self.rewards[batch_dim] = 0
-                elif self.winners[batch_dim] == 1:
+                if self.winners[batch_dim] == 1:
                     self.rewards[batch_dim] = 1
-                else:
-                    self.rewards[batch_dim] = -1
-                self.done[batch_dim] = 1
                 self.game_states[batch_dim, :] = 0
                 continue
 
@@ -156,15 +150,14 @@ cdef class TicTacToeEnv:
                     num_available_moves += 1
 
             # If there are available moves, select a random move for the opponent
-            if num_available_moves > 0:
-                opponent_action = available_moves[rand() % num_available_moves]
-                self.game_states[batch_dim, opponent_action * 2 + 1] = 1
-                self.check_win(batch_dim)
-                if self.winners[batch_dim] > 0:
-                    # only player 2 can win here
-                    self.rewards[batch_dim] = -1
-                    self.done[batch_dim] = 1
-                    self.game_states[batch_dim, :] = 0
+            opponent_action = available_moves[rand() % num_available_moves]
+            self.game_states[batch_dim, opponent_action * 2 + 1] = 1
+            self.check_win(batch_dim)
+            if self.winners[batch_dim] > 0:
+                # only player 2 can win here
+                self.rewards[batch_dim] = -1
+                self.done[batch_dim] = 1
+                self.game_states[batch_dim, :] = 0
 
             # else we continue the game
 
