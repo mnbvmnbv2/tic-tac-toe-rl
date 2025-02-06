@@ -61,3 +61,6 @@ Then you need to move the generated files into the folders for correct import.
 
 For testing
 `uv run pytest`
+
+For python bindings rust
+`cd rust/python_bindings | uv run maturin develop`
