@@ -38,8 +38,12 @@ I have also made a "PVP" version where there are two agents and it truly is a se
 - PureJAXrl
 - PufferEnv
 - Pytorch RL
-- Stablebaselines 3
-- Ray Rllib
+- Stablebaselines 3 (meh)
+- Ray Rllib (meh)
+- Flux
+- Burn
+- Candle
+- tch-rs
 
 ## Testing/Benchmarking
 
