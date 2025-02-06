@@ -11,16 +11,26 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 [[package]]
 name = "burn"
 version = "0.1.0"
+dependencies = [
+ "env",
+]
 
 [[package]]
 name = "candle"
 version = "0.1.0"
+dependencies = [
+ "env",
+]
 
 [[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "env"
+version = "0.1.0"
 
 [[package]]
 name = "heck"
@@ -137,6 +147,7 @@ dependencies = [
 name = "python_bindings"
 version = "0.1.0"
 dependencies = [
+ "env",
  "pyo3",
 ]
 
@@ -169,6 +180,9 @@ checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 [[package]]
 name = "tch"
 version = "0.1.0"
+dependencies = [
+ "env",
+]
 
 [[package]]
 name = "unicode-ident"
