@@ -9,3 +9,6 @@ __pycache__
 # magic environments
 .magic
 *.pyd
+.pytest_cache
+
+/rust/target
