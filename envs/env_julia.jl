@@ -85,7 +85,6 @@ function step!(env::TicTacToeEnv, actions::Vector{Int8})
     Threads.@threads for i::Int in 1:size(env.game_states, 1)
         if env.done[i]
             reset!(env)
-            continue
         end
         current_action = actions[i]
         # if illegal move
