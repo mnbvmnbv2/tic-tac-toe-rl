@@ -3,8 +3,8 @@
 # cython: boundscheck=False
 # cython: wraparound=False
 # cython: cdivision=True
-# distutils: extra_compile_args=/openmp
-# distutils: extra_link_args=/openmp
+# distutils: extra_compile_args=-fopenmp
+# distutils: extra_link_args=-fopenmp
 cimport cython
 cimport numpy as cnp
 from libc.stdlib cimport rand
