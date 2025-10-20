@@ -1,4 +1,8 @@
-using Random, Flux
+module Env
+
+export TicTacToeEnv, getTicTacToeEnv, step!, reset!, run_benchmark
+
+using Random
 
 mutable struct TicTacToeEnv
     game_states::Matrix{Int8}
@@ -7,7 +11,7 @@ mutable struct TicTacToeEnv
     winners::Array{Int8}
 end
 
-function TicTacToeEnv(batch_size::Int=1)
+function getTicTacToeEnv(batch_size::Int=1)
     game_states = zeros(Int8, batch_size, 18)
     rewards = zeros(Int8, batch_size)
     done = falses(batch_size)
@@ -151,52 +155,9 @@ function run_benchmark(batch_size::Int, num_steps::Int)
     println("Batch size: $batch_size -> $steps_per_sec steps per second")
 end
 
-# Run benchmarks for different batch sizes
+# @info "Running direct benchmark..."
 # for batch in [1, 10, 100, 1000]
 #     run_benchmark(batch, 10_000)
 # end
 
-# NN setup
-model_cpu = Chain(
-    Dense(18, 128, relu),
-    Dense(128, 84, relu),
-    Dense(84, 9)
-)
-
-# For GPU inference, move the model to the GPU.
-# model_cuda = gpu(model_cpu)
-
-function predict_cpu(env::TicTacToeEnv)
-    # Transpose to get shape (features, batch)
-    input = float.(env.game_states)'  # Convert to Float
-    return model_cpu(input)
-end
-
-# function predict_cuda(env::TicTacToeEnv)
-#     # Move the input to GPU and transpose
-#     input = cu(float.(env.game_states)')
-#     return model_cuda(input)
-# end
-
-function run_flux_benchmark(batch_size::Int, num_steps::Int; use_cuda::Bool=false)
-    env = TicTacToeEnv(batch_size)
-    # Warm-up steps: perform a few forward passes so that any compilation overhead is reduced.
-    for _ in 1:10
-        q_values = predict_cpu(env)
-        actions = Int8.(vec(map(ci -> ci[1], argmax(q_values, dims=1))))
-        step!(env, actions)
-    end
-
-    println("Running benchmark for Flux prediction (use_cuda=$(use_cuda))")
-    start_time = time()
-    for _ in 1:num_steps
-        q_values = predict_cpu(env)
-        actions = Int8.(vec(map(ci -> ci[1], argmax(q_values, dims=1))))
-        step!(env, actions)
-    end
-    elapsed = time() - start_time
-    steps_per_sec = num_steps * batch_size / elapsed
-    println("Batch size: $batch_size -> $(round(steps_per_sec, digits=2)) steps per second")
-end
-
-run_flux_benchmark(1000, 1000, use_cuda=false)
+end # module
