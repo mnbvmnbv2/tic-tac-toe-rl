@@ -56,7 +56,7 @@ I have also made a "PVP" version where there are two agents and it truly is a se
 
 For UV cython compilation:
 
-`uv run python setup.py build_ext --inplace`
+`uv run pip install -e .`
 Then you need to move the generated files into the folders for correct import.
 
 For testing
