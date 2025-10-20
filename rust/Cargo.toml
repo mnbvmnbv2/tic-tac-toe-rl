@@ -1,2 +1,2 @@
 [workspace]
-members = ["burn", "candle", "env", "python_bindings", "tch"]
+members = ["env", "python_bindings"]

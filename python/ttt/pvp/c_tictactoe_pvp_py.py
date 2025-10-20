@@ -5,7 +5,7 @@ import gymnasium
 import numpy as np
 import torch
 
-from pvp.c_tictactoe_pvp import TicTacToePVPEnv
+from ttt.cython.c_tictactoe_pvp import TicTacToePVPEnv
 
 
 @dataclass

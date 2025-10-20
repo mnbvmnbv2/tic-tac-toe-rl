@@ -1,82 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel", "Cython>=3", "numpy>=2"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "tic-tac-toe-rl"
 version = "0.1.0"
 description = "Playing around with reinforcement learning in tic-tac-toe"
 readme = "README.md"
 requires-python = ">=3.11"
-
-# [project.optional-dependencies]
-# jax-group = [
-#     "chex>=0.1.87",
-#     "cython>=3.0.11",
-#     "flax>=0.10.2",
-#     "gymnasium>=1.0.0",
-#     "gymnax>=0.0.8",
-#     "jax>=0.4.35",
-#     "jupyterlab>=4.2.5",
-#     "numba>=0.60.0",
-#     "setuptools>=74.1.2",
-# ]
-# torchrl-group = [
-#     "tensordict>=0.6.1",
-#     "cython>=3.0.11",
-#     "jupyterlab>=4.2.5",
-#     "gymnasium>=1.0.0",
-#     "torch>=2.5.1",
-#     "torchrl>=0.6.0",
-#     "tyro>=0.8.14",
-# ]
-# pufferlib-group = ["pufferlib"]
-
 dependencies = [
     "jupyterlab>=4.2.5",
     "numba>=0.60.0",
     "tqdm>=4.66.6",
-    # "tensordict>=0.6.1",
     "cython>=3.0.11",
-    "jupyterlab>=4.2.5",
     "gymnasium>=1.0.0",
-    # "torchrl>=0.6.0",
-    # "tyro>=0.8.14",
     "sympy>=1.13.1",
     "matplotlib>=3.10.0",
-    # "filelock>=3.16.1",
     "pytest>=8.3.4",
     "maturin>=1.8.2",
 ]
 
 [project.optional-dependencies]
-# cpu = ["torch>=2.5.1", "torchvision>=0.20.1"]
 cu124 = ["torch>=2.5.1", "torchvision>=0.20.1"]
 
-# [tool.uv]
-# conflicts = [[{ extra = "cpu" }, { extra = "cu124" }]]
-
 [tool.uv.sources]
-torch = [
-    # { index = "pytorch-cpu", extra = "cpu", marker = "platform_system != 'Darwin'" },
-    { index = "pytorch-cu124", extra = "cu124" },
-]
-torchvision = [
-    # { index = "pytorch-cpu", extra = "cpu", marker = "platform_system != 'Darwin'" },
-    { index = "pytorch-cu124", extra = "cu124" },
-]
-
-# [[tool.uv.index]]
-# name = "pytorch-cpu"
-# url = "https://download.pytorch.org/whl/cpu"
-# explicit = true
+torch = [{ index = "pytorch-cu124", extra = "cu124" }]
+torchvision = [{ index = "pytorch-cu124", extra = "cu124" }]
 
 [[tool.uv.index]]
 name = "pytorch-cu124"
 url = "https://download.pytorch.org/whl/cu124"
 explicit = true
-# [tool.uv]
-# conflicts = [
-#     [
-#         { extra = "jax-group" },
-#         { extra = "pufferlib-group" },
-#         { extra = "torchrl-group" },
-#     ],
-# ]
-# cupy-cuda12x
+
+[tool.setuptools.packages.find]
+where = ["python"]
+include = ["ttt*"]
+
+[tool.setuptools.package-dir]
+"" = "python"
